@@ -12,7 +12,8 @@ export function tileAt(state, x, y) {
 
 export function isSupported(state, position = state.player) {
   const tile = tileAt(state, position.x, position.y);
-  return tile === ladderTile || tile === ropeTile || tileAt(state, position.x, position.y + 1) === solidTile;
+  const below = tileAt(state, position.x, position.y + 1);
+  return tile === ladderTile || tile === ropeTile || below === solidTile || below === ladderTile;
 }
 
 function traversable(state, x, y) {
