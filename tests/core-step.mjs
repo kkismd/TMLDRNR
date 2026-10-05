@@ -24,6 +24,36 @@ const ladder = ["#######", "#  H  #", "#  H  #", "#     #", "#######"];
 game = state(ladder, { x: 3, y: 2 });
 assert.deepEqual(position(step(game, Action.UP)), [3, 1, 1, "accepted"]);
 assert.deepEqual(position(step(game, Action.DOWN)), [3, 3, 1, "accepted"]);
+
+const ladderTop = ["#######", "#     #", "###H###", "#  H  #", "#######"];
+game = state(ladderTop, { x: 3, y: 2 });
+const climbed = step(game, Action.UP);
+assert.deepEqual(position(climbed), [3, 1, 1, "accepted"]);
+assert.equal(isSupported(climbed.state), true);
+assert.deepEqual(position(step(climbed.state, Action.WAIT)), [3, 1, 2, "accepted"]);
+const supportedExit = step(climbed.state, Action.RIGHT);
+assert.deepEqual(position(supportedExit), [4, 1, 2, "accepted"]);
+assert.equal(isSupported(supportedExit.state), true);
+assert.deepEqual(position(step(supportedExit.state, Action.WAIT)), [4, 1, 3, "accepted"]);
+
+game = state(["#######", "#     #", "#  H  #", "#  H  #", "#######"], { x: 3, y: 1 });
+assert.equal(isSupported(game), true);
+assert.deepEqual(position(step(game, Action.WAIT)), [3, 1, 1, "accepted"]);
+const unsupportedExit = step(game, Action.RIGHT);
+assert.deepEqual(position(unsupportedExit), [4, 1, 1, "accepted"]);
+assert.equal(isSupported(unsupportedExit.state), false);
+assert.deepEqual(position(step(unsupportedExit.state, Action.LEFT)), [4, 2, 2, "forced"]);
+
+game = state(["HHHHH", "HHHHH", "HHHHH", "HHHHH"], { x: 2, y: 2 });
+for (const [action, expected] of [
+  [Action.LEFT, [1, 2, 1, "accepted"]],
+  [Action.RIGHT, [3, 2, 1, "accepted"]],
+  [Action.UP, [2, 1, 1, "accepted"]],
+  [Action.DOWN, [2, 3, 1, "accepted"]],
+]) {
+  assert.deepEqual(position(step(game, action)), expected);
+}
+
 game = state(["#######", "#  H  #", "#     #", "#     #", "#######"], { x: 3, y: 1 });
 const sideExit = step(game, Action.RIGHT);
 assert.deepEqual(position(sideExit), [4, 1, 1, "accepted"]);
