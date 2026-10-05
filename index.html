@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
     <title>TMLDRNR — PoC</title>
     <link rel="stylesheet" href="./style.css">
     <script type="module" src="./src/main.js"></script>
@@ -28,9 +29,12 @@
           <button type="button" data-action="wait" class="wait">待機</button>
           <button type="button" data-action="right" class="right">右 →</button>
           <button type="button" data-action="down" class="down">下 ↓</button>
+          <button type="button" data-action="continue" class="continue">落下を 1 turn 進める</button>
         </div>
-        <p class="hint">矢印キー / Space キーでも入力できます。盤面はまだ動きません。</p>
-        <p class="diagnostic">最後の Action: <output id="last-action" aria-live="polite">なし</output></p>
+        <p class="hint">矢印キー / Space キーでも入力できます。落下中は任意 Action を無視し、1 マス落下します。</p>
+        <p class="diagnostic">Turn: <output id="turn" aria-live="polite">0</output></p>
+        <p class="diagnostic">状態: <output id="status" aria-live="polite">READY</output></p>
+        <p class="diagnostic">最後の遷移: <output id="last-action" aria-live="polite">なし</output></p>
       </section>
     </main>
   </body>

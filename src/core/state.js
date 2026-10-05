@@ -1,4 +1,3 @@
-// This is only the data needed to display a sample board. Gameplay state follows later.
 export function createSampleState(stage) {
   return {
     width: stage.tiles[0].length,
@@ -6,5 +5,6 @@ export function createSampleState(stage) {
     tiles: stage.tiles.map((row) => [...row]),
     player: { ...stage.player },
     guards: stage.guards.map((guard) => ({ ...guard })),
+    turn: 0,
   };
 }
