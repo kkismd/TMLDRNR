@@ -1,0 +1,73 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  background: #101820;
+  color: #edf3f4;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+.shell {
+  width: min(100%, 42rem);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+h1 { margin: 0; font-size: 1.6rem; }
+h2 { margin: 1.25rem 0 .5rem; font-size: 1rem; }
+p { margin: .5rem 0; }
+header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  width: 100%;
+  max-width: 39rem;
+  aspect-ratio: 13 / 9;
+  border: 2px solid #72858d;
+  background: #18232c;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  font-size: clamp(.7rem, 3.3vw, 1.55rem);
+  line-height: 1;
+}
+
+.tile--wall { color: #708590; background: #344550; }
+.tile--ladder { color: #ffcb70; }
+.tile--rope { color: #7ed0d0; }
+.tile--goal { color: #f8dd75; }
+.tile--player { color: #75ddff; }
+.tile--guard { color: #ff8c87; }
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 5rem));
+  gap: .4rem;
+  justify-content: center;
+}
+
+.controls button {
+  min-height: 2.75rem;
+  border: 1px solid #72858d;
+  border-radius: .4rem;
+  background: #293b47;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.controls button:hover, .controls button:focus-visible { background: #3b5968; }
+.up { grid-column: 2; }
+.left { grid-column: 1; }
+.wait { grid-column: 2; }
+.right { grid-column: 3; }
+.down { grid-column: 2; }
+.diagnostic { text-align: center; }
+.diagnostic output { font-weight: 700; color: #75ddff; }
