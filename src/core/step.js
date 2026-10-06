@@ -9,6 +9,18 @@ function isGuardOccupied(state, x, y, exceptGuardIndex) {
     index !== exceptGuardIndex && guard.x === x && guard.y === y);
 }
 
+function collidedGuardIndex(state) {
+  return state.guards.findIndex((guard) =>
+    guard.x === state.player.x && guard.y === state.player.y);
+}
+
+function defeat(state, phase, guardIndex) {
+  return {
+    state: { ...state, status: "lost" },
+    defeat: { phase, guardIndex },
+  };
+}
+
 export const GuardCadence = Object.freeze({
   EVERY_TURN: "1:1",
   TWO_OF_THREE: "2:3",
@@ -32,10 +44,35 @@ function guardActsOnTurn(turn, guardCount, cadence) {
 }
 
 export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
+  if (state.status === "lost") {
+    return {
+      state,
+      kind: "terminal",
+      guardPhase: false,
+      guardResults: [],
+      guardOutcome: null,
+      guardDecision: null,
+      defeat: null,
+    };
+  }
+
   const playerResult = stepPlayer(state, action);
   if (playerResult.kind === "rejected") {
     return {
       ...playerResult,
+      guardPhase: false,
+      guardResults: [],
+      guardOutcome: null,
+      guardDecision: null,
+      defeat: null,
+    };
+  }
+
+  const playerCollision = collidedGuardIndex(playerResult.state);
+  if (playerCollision !== -1) {
+    return {
+      ...playerResult,
+      ...defeat(playerResult.state, "player", playerCollision),
       guardPhase: false,
       guardResults: [],
       guardOutcome: null,
@@ -51,6 +88,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
   );
   let currentState = playerResult.state;
   const guardResults = [];
+  let defeatMetadata = null;
 
   for (let guardIndex = 0; guardIndex < guardCount; guardIndex += 1) {
     const guard = currentState.guards[guardIndex];
@@ -85,6 +123,13 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
       outcome: decision.kind === "forced" ? "forced" : "move",
       decision: guardResult.decision,
     });
+    if (currentState.guards[guardIndex].x === currentState.player.x &&
+        currentState.guards[guardIndex].y === currentState.player.y) {
+      const lost = defeat(currentState, "guard", guardIndex);
+      currentState = lost.state;
+      defeatMetadata = lost.defeat;
+      break;
+    }
   }
 
   const result = {
@@ -92,6 +137,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     kind: playerResult.kind,
     guardPhase: true,
     guardResults,
+    defeat: defeatMetadata,
   };
   if (guardResults.length === 1) {
     result.guardOutcome = guardResults[0].outcome;

@@ -25,6 +25,7 @@ function check(before, action, kind, player, guard, direction, decisionKind,
 
 const floor = ["#########", "#       #", "#########"];
 const onFloor = game(floor, { x: 2, y: 1 }, { x: 5, y: 1 });
+assert.equal(onFloor.status, "playing");
 check(onFloor, Action.LEFT, "accepted", { x: 1, y: 1 }, { x: 4, y: 1 }, "left", "chase");
 check(onFloor, Action.RIGHT, "accepted", { x: 3, y: 1 }, { x: 4, y: 1 }, "left", "chase");
 check(onFloor, Action.WAIT, "accepted", { x: 2, y: 1 }, { x: 4, y: 1 }, "left", "chase");
@@ -203,6 +204,7 @@ assert.equal(retriedFall.guardResults[0].outcome, "blocked");
 // Supported Guards share the global cadence decision; unsupported Guards still fall.
 const mixedCadence = {
   ...stacked,
+  player: { x: 7, y: 1 },
   guards: [{ x: 1, y: 1 }, { x: 4, y: 1 }],
 };
 const mixedSkip = step(mixedCadence, Action.WAIT, GuardCadence.EVERY_OTHER);
@@ -240,5 +242,60 @@ assert.deepEqual(step(structuredClone(movingPair), Action.WAIT), vacatedCell);
 assert.deepEqual(run(movingPair), run(structuredClone(movingPair)));
 assert.deepEqual(run(movingPair, GuardCadence.EVERY_OTHER),
   run(structuredClone(movingPair), GuardCadence.EVERY_OTHER));
+
+// Player contact is accepted and becomes terminal before the Guard phase.
+const playerContact = {
+  ...game(floor, { x: 2, y: 1 }, { x: 3, y: 1 }),
+};
+const playerDeath = step(playerContact, Action.RIGHT);
+assert.equal(playerDeath.kind, "accepted");
+assert.equal(playerDeath.state.status, "lost");
+assert.deepEqual(playerDeath.state.player, { x: 3, y: 1 });
+assert.equal(playerDeath.state.turn, 1);
+assert.equal(playerDeath.guardPhase, false);
+assert.deepEqual(playerDeath.guardResults, []);
+assert.deepEqual(playerDeath.defeat, { phase: "player", guardIndex: 0 });
+
+const playerFallContact = createSampleState({
+  tiles: ["#########", "#       #", "#       #", "#########"],
+  player: { x: 3, y: 1 }, guards: [{ x: 3, y: 2 }],
+});
+const playerFallDeath = step(playerFallContact, Action.WAIT);
+assert.equal(playerFallDeath.kind, "forced");
+assert.equal(playerFallDeath.state.status, "lost");
+assert.deepEqual(playerFallDeath.defeat, { phase: "player", guardIndex: 0 });
+assert.equal(playerFallDeath.guardPhase, false);
+
+// A Guard entering the Player cell keeps its movement outcome and stops later Guards.
+const guardContact = {
+  ...game(floor, { x: 3, y: 1 }, { x: 4, y: 1 }),
+  guards: [{ x: 4, y: 1 }, { x: 7, y: 1 }],
+};
+const guardDeath = step(guardContact, Action.WAIT);
+assert.equal(guardDeath.state.status, "lost");
+assert.deepEqual(guardDeath.state.guards, [{ x: 3, y: 1 }, { x: 7, y: 1 }]);
+assert.deepEqual(guardDeath.guardResults.map(({ outcome }) => outcome), ["move"]);
+assert.deepEqual(guardDeath.defeat, { phase: "guard", guardIndex: 0 });
+assert.equal(guardDeath.state.turn, guardContact.turn + 1);
+
+const guardFallContact = createSampleState({
+  tiles: ["#########", "#       #", "#       #", "#########"],
+  player: { x: 4, y: 2 }, guards: [{ x: 4, y: 1 }, { x: 7, y: 1 }],
+});
+const guardFallDeath = step(guardFallContact, Action.WAIT);
+assert.equal(guardFallDeath.state.status, "lost");
+assert.equal(guardFallDeath.guardResults[0].outcome, "forced");
+assert.deepEqual(guardFallDeath.defeat, { phase: "guard", guardIndex: 0 });
+assert.deepEqual(guardFallDeath.state.guards[1], guardFallContact.guards[1]);
+
+// Terminal is a same-identity no-op, distinct from rejected input.
+const terminal = step(playerDeath.state, Action.LEFT);
+assert.equal(terminal.kind, "terminal");
+assert.strictEqual(terminal.state, playerDeath.state);
+assert.equal(terminal.guardPhase, false);
+assert.deepEqual(terminal.guardResults, []);
+assert.equal(terminal.defeat, null);
+assert.equal(terminal.state.turn, 1);
+assert.deepEqual(step(structuredClone(playerContact), Action.RIGHT), playerDeath);
 
 console.log("World turn regression cases passed.");
