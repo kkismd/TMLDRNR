@@ -4,6 +4,7 @@ import { createSampleState } from "../src/core/state.js";
 import { step } from "../src/core/step.js";
 import {
   leftTieQuirkStage,
+  gatekeeperWaitStage,
   lureFirstStage,
   sameRowChaseStage,
   selectorSmokeStage,
@@ -73,6 +74,7 @@ const validationStages = [
   lureFirstStage,
   waitSyncStage,
   leftTieQuirkStage,
+  gatekeeperWaitStage,
 ];
 assert.deepEqual(validationStages.map(({ id }) => id), [
   "same-row-chase",
@@ -80,6 +82,7 @@ assert.deepEqual(validationStages.map(({ id }) => id), [
   "lure-first",
   "wait-sync",
   "left-tie-quirk",
+  "gatekeeper-wait",
 ]);
 assert.deepEqual(stages.map(({ id }) => id), [
   "same-row-chase",
@@ -87,6 +90,7 @@ assert.deepEqual(stages.map(({ id }) => id), [
   "lure-first",
   "wait-sync",
   "left-tie-quirk",
+  "gatekeeper-wait",
   "selector-smoke",
 ]);
 const expectedSolutions = new Map([
@@ -112,6 +116,13 @@ const expectedSolutions = new Map([
     Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
     Action.RIGHT, Action.RIGHT,
   ]],
+  [gatekeeperWaitStage.id, [
+    Action.LEFT, Action.WAIT,
+    Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.DOWN, Action.DOWN, Action.DOWN,
+    Action.RIGHT, Action.RIGHT,
+  ]],
 ]);
 
 const expectedInitialStates = new Map([
@@ -120,6 +131,7 @@ const expectedInitialStates = new Map([
   ["lure-first", { player: { x: 2, y: 7 }, guards: [{ x: 3, y: 2 }] }],
   ["wait-sync", { player: { x: 9, y: 1 }, guards: [{ x: 8, y: 2 }] }],
   ["left-tie-quirk", { player: { x: 8, y: 7 }, guards: [{ x: 6, y: 2 }] }],
+  ["gatekeeper-wait", { player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }] }],
 ]);
 const solutionResults = new Map();
 for (const stage of validationStages) {
@@ -171,6 +183,47 @@ assert.deepEqual(tieResults.slice(0, 3).map(({ guardDecision }) => guardDecision
   ["left", "left", "left"]);
 assert.equal(tieResults[3].guardDecision.direction, "down");
 assert.equal(tieResults.at(-1).state.status, "won");
+
+const gatekeeperResults = solutionResults.get(gatekeeperWaitStage.id);
+assert.equal(gatekeeperWaitStage.tiles.length, 9);
+assert.ok(gatekeeperWaitStage.tiles.every((row) => row.length === 13));
+assert.equal(gatekeeperWaitStage.guards.length, 1);
+assert.deepEqual(gatekeeperResults.map(({ state }) => ({ player: state.player, guard: state.guards[0] }))[0], {
+  player: { x: 3, y: 5 }, guard: { x: 6, y: 5 },
+});
+assert.deepEqual(gatekeeperResults[1].state.guards[0], { x: 5, y: 5 });
+assert.deepEqual(gatekeeperResults[4].state.player, { x: 3, y: 2 });
+assert.deepEqual(gatekeeperResults[4].state.guards[0], { x: 3, y: 4 });
+assert.deepEqual(gatekeeperResults[7].state.player, { x: 6, y: 2 });
+assert.deepEqual(gatekeeperResults[7].state.guards[0], { x: 4, y: 2 });
+assert.deepEqual(gatekeeperResults[10].state.player, { x: 6, y: 5 });
+assert.deepEqual(gatekeeperResults[10].state.guards[0], { x: 3, y: 4 });
+assert.equal(gatekeeperResults.length, 13);
+assert.equal(gatekeeperResults.at(-1).state.status, "won");
+
+function replay(stage, actions) {
+  let state = createSampleState(stage);
+  const results = [];
+  for (const action of actions) {
+    const result = step(state, action);
+    results.push(result);
+    state = result.state;
+    if (state.status !== "playing") break;
+  }
+  return results;
+}
+
+const directResults = replay(gatekeeperWaitStage, [Action.RIGHT, Action.RIGHT]);
+assert.equal(directResults.length, 2);
+assert.equal(directResults.at(-1).state.status, "lost");
+
+const withoutWaitResults = replay(gatekeeperWaitStage, [
+  Action.LEFT,
+  Action.UP, Action.UP, Action.UP,
+  Action.RIGHT, Action.RIGHT,
+]);
+assert.equal(withoutWaitResults.length, 6);
+assert.equal(withoutWaitResults.at(-1).state.status, "lost");
 
 assert.ok(stages.includes(selectorSmokeStage), "catalog must contain the selector smoke fixture");
 assert.equal(selectorSmokeStage.tiles.length, 9);
