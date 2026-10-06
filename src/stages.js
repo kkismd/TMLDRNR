@@ -25,4 +25,26 @@ export const sampleStage = {
   ],
 };
 
-export const stages = [sampleStage];
+// UI smoke fixture only; it is not a Guard validation stage and does not count
+// toward PoC #3's validation-stage target.
+export const selectorSmokeStage = {
+  id: "selector-smoke",
+  title: "空盤面（操作確認）",
+  theme: "Stage selector・session切替・基本移動のsmoke fixture。Guard誘導の評価には使わない",
+  tiles: [
+    "#############",
+    "#           #",
+    "#           #",
+    "#           #",
+    "#           #",
+    "#           #",
+    "#           #",
+    "#          E#",
+    "#############",
+  ],
+  player: { x: 1, y: 7 },
+  guards: [],
+  knownSolution: Array(10).fill(Action.RIGHT),
+};
+
+export const stages = [sampleStage, selectorSmokeStage];

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { step } from "../src/core/step.js";
-import { stages } from "../src/stages.js";
+import { selectorSmokeStage, stages } from "../src/stages.js";
 
 assert.ok(stages.length > 0, "stage catalog must not be empty");
 
@@ -59,6 +59,15 @@ assert.deepEqual(sample.knownSolution, [
   Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
   Action.RIGHT, Action.RIGHT, Action.RIGHT,
 ]);
+
+assert.ok(stages.includes(selectorSmokeStage), "catalog must contain the selector smoke fixture");
+assert.equal(selectorSmokeStage.tiles.length, 9);
+assert.ok(selectorSmokeStage.tiles.every((row) => row.length === 13));
+assert.deepEqual(selectorSmokeStage.player, { x: 1, y: 7 });
+assert.deepEqual(selectorSmokeStage.guards, []);
+assert.deepEqual(selectorSmokeStage.knownSolution, Array(10).fill(Action.RIGHT));
+assert.match(selectorSmokeStage.theme, /smoke fixture/i);
+assert.match(selectorSmokeStage.theme, /Guard誘導の評価には使わない/);
 
 const sampleState = createSampleState(sample);
 for (const metadataKey of ["id", "title", "theme", "knownSolution"]) {
