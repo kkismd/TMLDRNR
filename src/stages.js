@@ -2,8 +2,8 @@
 export const sampleStage = {
   tiles: [
     "#############",
-    "#          E#",
-    "#  H     H  #",
+    "#           #",
+    "#  H  E  H  #",
     "###H#####H###",
     "#  H     H  #",
     "#  H     H  #",

@@ -439,11 +439,11 @@ assert.equal(isTraversable(horizontalGoal, 2, 1), true);
 assert.equal(isSupported(game(["#######", "# E   #", "#     #", "#######"],
   { x: 2, y: 1 }, { x: 5, y: 1 })), false);
 
-// The browser sample keeps a two-ladder route choice visible from one shared turn.
+// The browser sample keeps the Guard branch observable and its upper goal reachable.
 assert.deepEqual(sampleStage.tiles, [
   "#############",
-  "#          E#",
-  "#  H     H  #",
+  "#           #",
+  "#  H  E  H  #",
   "###H#####H###",
   "#  H     H  #",
   "#  H     H  #",
@@ -454,6 +454,11 @@ assert.deepEqual(sampleStage.tiles, [
 const sample = createSampleState(sampleStage);
 assert.equal(sample.width, 13);
 assert.equal(sample.height, 9);
+assert.equal(sample.tiles[2][6], "E");
+for (let x = 4; x <= 8; x += 1) {
+  assert.equal(sample.tiles[2][x] === "#", false);
+  assert.equal(sample.tiles[3][x], "#");
+}
 assert.deepEqual(sample.tiles.flatMap((row, y) => row.flatMap((tile, x) =>
   tile === "H" ? [{ x, y }] : [])),
   [2, 3, 4, 5, 6, 7].flatMap((y) => [3, 9].map((x) => ({ x, y }))));
@@ -478,5 +483,31 @@ assert.equal(sampleUp.guardDecision.direction, "up");
 assert.deepEqual(sampleUp.state.guards[0], { x: 9, y: 6 });
 assert.equal(sampleUp.state.status, "playing");
 assert.notEqual(sampleWait.guardDecision.direction, sampleUp.guardDecision.direction);
+
+const sampleClearActions = [Action.RIGHT, ...Array(5).fill(Action.UP),
+  ...Array(3).fill(Action.RIGHT)];
+const sampleClearPath = [
+  { x: 3, y: 7 }, { x: 3, y: 6 }, { x: 3, y: 5 },
+  { x: 3, y: 4 }, { x: 3, y: 3 }, { x: 3, y: 2 },
+  { x: 4, y: 2 }, { x: 5, y: 2 }, { x: 6, y: 2 },
+];
+let sampleClearState = sample;
+for (const [index, action] of sampleClearActions.entries()) {
+  const result = step(sampleClearState, action);
+  assert.deepEqual(result.state.player, sampleClearPath[index]);
+  assert.equal(result.state.turn, index + 1);
+  if (index < sampleClearActions.length - 1) {
+    assert.equal(result.state.status, "playing");
+  } else {
+    assert.equal(result.kind, "accepted");
+    assert.equal(result.state.tiles[result.state.player.y][result.state.player.x], "E");
+    assert.equal(result.state.status, "won");
+    assert.deepEqual(result.clear, { phase: "player" });
+    assert.equal(result.guardPhase, false);
+    assert.deepEqual(result.guardResults, []);
+    assert.deepEqual(result.state.guards, sampleClearState.guards);
+  }
+  sampleClearState = result.state;
+}
 
 console.log("World turn regression cases passed.");
