@@ -1,25 +1,11 @@
 import { Action } from "./actions.js";
+import { tileAt, isSupported, isTraversable } from "./terrain.js";
 
-const solidTile = "#";
 const ladderTile = "H";
 const ropeTile = "-";
 const validActions = new Set(Object.values(Action));
 
-export function tileAt(state, x, y) {
-  if (x < 0 || y < 0 || x >= state.width || y >= state.height) return undefined;
-  return state.tiles[y][x];
-}
-
-export function isSupported(state, position = state.player) {
-  const tile = tileAt(state, position.x, position.y);
-  const below = tileAt(state, position.x, position.y + 1);
-  return tile === ladderTile || tile === ropeTile || below === solidTile || below === ladderTile;
-}
-
-function traversable(state, x, y) {
-  const tile = tileAt(state, x, y);
-  return tile !== undefined && tile !== solidTile;
-}
+export { tileAt, isSupported } from "./terrain.js";
 
 function movedState(state, x, y) {
   return {
@@ -42,7 +28,7 @@ export function step(state, action) {
   const below = tileAt(state, x, y + 1);
 
   if (!isSupported(state)) {
-    if (!traversable(state, x, y + 1)) {
+    if (!isTraversable(state, x, y + 1)) {
       throw new Error("Invalid game state: unsupported player cannot fall into the board below.");
     }
     return { state: movedState(state, x, y + 1), kind: "forced" };
@@ -54,12 +40,12 @@ export function step(state, action) {
     case Action.LEFT:
     case Action.RIGHT: {
       const nextX = x + (action === Action.LEFT ? -1 : 1);
-      return traversable(state, nextX, y) ? accepted(state, nextX, y) : rejected(state);
+      return isTraversable(state, nextX, y) ? accepted(state, nextX, y) : rejected(state);
     }
     case Action.UP: {
       const nextY = y - 1;
       if ((tileAt(state, x, y) === ladderTile || tileAt(state, x, nextY) === ladderTile) &&
-          traversable(state, x, nextY)) {
+          isTraversable(state, x, nextY)) {
         return accepted(state, x, nextY);
       }
       return rejected(state);
@@ -69,7 +55,7 @@ export function step(state, action) {
       const nextY = y + 1;
       const canDescendRope = current === ropeTile;
       const canDescendLadder = current === ladderTile || below === ladderTile;
-      if ((canDescendRope || canDescendLadder) && traversable(state, x, nextY)) {
+      if ((canDescendRope || canDescendLadder) && isTraversable(state, x, nextY)) {
         return accepted(state, x, nextY);
       }
       return rejected(state);
