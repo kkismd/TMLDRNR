@@ -140,11 +140,39 @@ export const leftTieQuirkStage = {
   ],
 };
 
+export const gatekeeperWaitStage = {
+  id: "gatekeeper-wait",
+  title: "すれ違い",
+  theme: "Goalへ直行せずGuardを左へ十分に引きつけ、WAITで時間差を作って上段から反対側へ回り込む",
+  tiles: [
+    "#############",
+    "#           #",
+    "#  H  H     #",
+    "###H##H######",
+    "###H##H######",
+    "#  H  H E   #",
+    "#############",
+    "#############",
+    "#############",
+  ],
+  player: { x: 4, y: 5 },
+  guards: [{ x: 7, y: 5 }],
+  knownSolution: [
+    Action.LEFT,
+    Action.WAIT,
+    Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.DOWN, Action.DOWN, Action.DOWN,
+    Action.RIGHT, Action.RIGHT,
+  ],
+};
+
 export const stages = [
   sameRowChaseStage,
   sampleStage,
   lureFirstStage,
   waitSyncStage,
   leftTieQuirkStage,
+  gatekeeperWaitStage,
   selectorSmokeStage,
 ];
