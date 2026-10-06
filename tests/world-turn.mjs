@@ -3,6 +3,7 @@ import { Action } from "../src/core/actions.js";
 import { decideGuardMove } from "../src/core/guard-ai.js";
 import { createSampleState } from "../src/core/state.js";
 import { GuardCadence, step } from "../src/core/step.js";
+import { sampleStage } from "../src/stages.js";
 
 function game(tiles, player, guard) {
   return createSampleState({ tiles, player, guards: [guard] });
@@ -337,5 +338,45 @@ assert.deepEqual(terminal.guardResults, []);
 assert.equal(terminal.defeat, null);
 assert.equal(terminal.state.turn, 1);
 assert.deepEqual(step(structuredClone(playerContact), Action.RIGHT), playerDeath);
+
+// The browser sample keeps a two-ladder route choice visible from one shared turn.
+assert.deepEqual(sampleStage.tiles, [
+  "#############",
+  "#          E#",
+  "#  H     H  #",
+  "###H#####H###",
+  "#  H     H  #",
+  "#  H     H  #",
+  "#  H     H  #",
+  "#  H     H  #",
+  "#############",
+]);
+const sample = createSampleState(sampleStage);
+assert.equal(sample.width, 13);
+assert.equal(sample.height, 9);
+assert.deepEqual(sample.tiles.flatMap((row, y) => row.flatMap((tile, x) =>
+  tile === "H" ? [{ x, y }] : [])),
+  [2, 3, 4, 5, 6, 7].flatMap((y) => [3, 9].map((x) => ({ x, y }))));
+assert.deepEqual(sample.player, { x: 2, y: 7 });
+assert.deepEqual(sample.guards, [{ x: 10, y: 7 }]);
+
+const sampleFirst = step(sample, Action.RIGHT);
+assert.deepEqual(sampleFirst.state.player, { x: 3, y: 7 });
+assert.equal(sampleFirst.guardDecision.direction, "left");
+assert.deepEqual(sampleFirst.state.guards[0], { x: 9, y: 7 });
+assert.equal(sampleFirst.state.status, "playing");
+
+const sampleWait = step(sampleFirst.state, Action.WAIT);
+assert.deepEqual(sampleWait.state.player, { x: 3, y: 7 });
+assert.equal(sampleWait.guardDecision.direction, "left");
+assert.deepEqual(sampleWait.state.guards[0], { x: 8, y: 7 });
+assert.equal(sampleWait.state.status, "playing");
+
+const sampleUp = step(sampleFirst.state, Action.UP);
+assert.deepEqual(sampleUp.state.player, { x: 3, y: 6 });
+assert.equal(sampleUp.guardDecision.direction, "up");
+assert.deepEqual(sampleUp.state.guards[0], { x: 9, y: 6 });
+assert.equal(sampleUp.state.status, "playing");
+assert.notEqual(sampleWait.guardDecision.direction, sampleUp.guardDecision.direction);
 
 console.log("World turn regression cases passed.");
