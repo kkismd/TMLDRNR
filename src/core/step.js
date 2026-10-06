@@ -1,8 +1,13 @@
-import { stepGuard } from "./guard-ai.js";
+import { decideGuardMove, stepGuard } from "./guard-ai.js";
 import { stepPlayer } from "./player-step.js";
 import { isSupported } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
+
+export function isGuardOccupied(state, x, y, exceptGuardIndex) {
+  return state.guards.some((guard, index) =>
+    index !== exceptGuardIndex && guard.x === x && guard.y === y);
+}
 
 export const GuardCadence = Object.freeze({
   EVERY_TURN: "1:1",
@@ -29,28 +34,68 @@ function guardActsOnTurn(turn, guardCount, cadence) {
 export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
   const playerResult = stepPlayer(state, action);
   if (playerResult.kind === "rejected") {
-    return { ...playerResult, guardPhase: false, guardOutcome: null, guardDecision: null };
-  }
-
-  const guard = playerResult.state.guards[0];
-  if (!guard) throw new RangeError("Invalid guard index: 0");
-  if (isSupported(playerResult.state, guard) &&
-      !guardActsOnTurn(playerResult.state.turn, playerResult.state.guards.length, cadence)) {
     return {
       ...playerResult,
-      guardPhase: true,
-      guardOutcome: "skip",
+      guardPhase: false,
+      guardResults: [],
+      guardOutcome: null,
       guardDecision: null,
     };
   }
 
-  const guardResult = stepGuard(playerResult.state, 0);
-  return {
-    state: guardResult.state,
+  const guardCount = playerResult.state.guards.length;
+  const normalMovementActive = guardCount > 0 && guardActsOnTurn(
+    playerResult.state.turn,
+    guardCount,
+    cadence,
+  );
+  let currentState = playerResult.state;
+  const guardResults = [];
+
+  for (let guardIndex = 0; guardIndex < guardCount; guardIndex += 1) {
+    const guard = currentState.guards[guardIndex];
+    const supported = isSupported(currentState, guard);
+    if (supported && !normalMovementActive) {
+      guardResults.push({ guardIndex, outcome: "skip", decision: null });
+      continue;
+    }
+
+    const decision = decideGuardMove(currentState, guardIndex);
+    if (decision.direction === "stay") {
+      guardResults.push({ guardIndex, outcome: "stay", decision });
+      continue;
+    }
+
+    const delta = {
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 },
+      up: { x: 0, y: -1 },
+      down: { x: 0, y: 1 },
+    }[decision.direction];
+    const target = { x: guard.x + delta.x, y: guard.y + delta.y };
+    if (isGuardOccupied(currentState, target.x, target.y, guardIndex)) {
+      guardResults.push({ guardIndex, outcome: "blocked", decision });
+      continue;
+    }
+
+    const guardResult = stepGuard(currentState, guardIndex);
+    currentState = guardResult.state;
+    guardResults.push({
+      guardIndex,
+      outcome: decision.kind === "forced" ? "forced" : "move",
+      decision: guardResult.decision,
+    });
+  }
+
+  const result = {
+    state: currentState,
     kind: playerResult.kind,
     guardPhase: true,
-    guardOutcome: guardResult.decision.kind === "forced" ? "forced" :
-      guardResult.decision.kind === "stay" ? "stay" : "move",
-    guardDecision: guardResult.decision,
+    guardResults,
   };
+  if (guardResults.length === 1) {
+    result.guardOutcome = guardResults[0].outcome;
+    result.guardDecision = guardResults[0].decision;
+  }
+  return result;
 }

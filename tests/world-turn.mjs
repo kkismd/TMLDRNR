@@ -35,7 +35,7 @@ const rejected = check(atWall, Action.LEFT, "rejected", { x: 1, y: 1 },
 assert.strictEqual(rejected.state, atWall);
 assert.equal(rejected.guardDecision, null);
 const twoGuards = { ...onFloor, guards: [...onFloor.guards, { x: 7, y: 1 }] };
-assert.deepEqual(step(twoGuards, Action.WAIT).state.guards[1], { x: 7, y: 1 });
+assert.deepEqual(step(twoGuards, Action.WAIT).state.guards[1], { x: 6, y: 1 });
 
 // At the same world turn, only the count-based policy changes with Guard count.
 const oneGuardAtTurnOne = { ...onFloor, turn: 1 };
@@ -44,14 +44,15 @@ const oneGuardCountResult = step(oneGuardAtTurnOne, Action.WAIT, GuardCadence.BY
 const twoGuardCountResult = step(twoGuardsAtTurnOne, Action.WAIT, GuardCadence.BY_GUARD_COUNT);
 assert.equal(oneGuardCountResult.guardOutcome, "move");
 assert.deepEqual(oneGuardCountResult.state.guards[0], { x: 4, y: 1 });
-assert.equal(twoGuardCountResult.guardOutcome, "skip");
-assert.equal(twoGuardCountResult.guardDecision, null);
+assert.deepEqual(twoGuardCountResult.guardResults.map(({ outcome }) => outcome), ["skip", "skip"]);
 assert.deepEqual(twoGuardCountResult.state.guards, twoGuardsAtTurnOne.guards);
 assert.deepEqual(step(structuredClone(twoGuardsAtTurnOne), Action.WAIT, GuardCadence.BY_GUARD_COUNT),
   twoGuardCountResult);
-assert.equal(step(twoGuardsAtTurnOne, Action.WAIT, GuardCadence.EVERY_TURN).guardOutcome, "move");
+assert.deepEqual(step(twoGuardsAtTurnOne, Action.WAIT, GuardCadence.EVERY_TURN)
+  .guardResults.map(({ outcome }) => outcome), ["move", "move"]);
 assert.equal(step(oneGuardAtTurnOne, Action.WAIT, GuardCadence.EVERY_OTHER).guardOutcome, "skip");
-assert.equal(step(twoGuardsAtTurnOne, Action.WAIT, GuardCadence.EVERY_OTHER).guardOutcome, "skip");
+assert.deepEqual(step(twoGuardsAtTurnOne, Action.WAIT, GuardCadence.EVERY_OTHER)
+  .guardResults.map(({ outcome }) => outcome), ["skip", "skip"]);
 
 const up = game(["#########", "#       #", "###H#####", "#  H    #", "#########"],
   { x: 3, y: 2 }, { x: 5, y: 1 });
@@ -122,13 +123,13 @@ const twoGuardFall = {
 };
 const countFallOne = step(twoGuardFall, Action.WAIT, GuardCadence.BY_GUARD_COUNT);
 assert.equal(countFallOne.state.turn, 2); // A supported Guard would skip this turn.
-assert.equal(countFallOne.guardOutcome, "forced");
+assert.deepEqual(countFallOne.guardResults.map(({ outcome }) => outcome), ["forced", "skip"]);
 assert.deepEqual(countFallOne.state.guards, [{ x: 4, y: 2 }, { x: 6, y: 1 }]);
 assert.deepEqual(step(structuredClone(twoGuardFall), Action.WAIT, GuardCadence.BY_GUARD_COUNT),
   countFallOne);
 const countFallTwo = step(countFallOne.state, Action.WAIT, GuardCadence.BY_GUARD_COUNT);
-assert.equal(countFallTwo.guardOutcome, "forced");
-assert.deepEqual(countFallTwo.state.guards, [{ x: 4, y: 3 }, { x: 6, y: 1 }]);
+assert.deepEqual(countFallTwo.guardResults.map(({ outcome }) => outcome), ["forced", "move"]);
+assert.deepEqual(countFallTwo.state.guards, [{ x: 4, y: 3 }, { x: 5, y: 1 }]);
 
 const fallingPlayer = game(["#########", "#       #", "#       #", "#       #", "#########"],
   { x: 2, y: 1 }, { x: 5, y: 1 });
@@ -151,5 +152,82 @@ assert.deepEqual(run(onFloor, GuardCadence.EVERY_OTHER),
 assert.deepEqual(run(onFloor, GuardCadence.TWO_OF_THREE),
   run(structuredClone(onFloor), GuardCadence.TWO_OF_THREE));
 assert.deepEqual(onFloor, game(floor, { x: 2, y: 1 }, { x: 5, y: 1 }));
+
+// Guard updates are ordered and later decisions use the state left by earlier Guards.
+const movingPair = {
+  ...game(floor, { x: 1, y: 1 }, { x: 3, y: 1 }),
+  guards: [{ x: 3, y: 1 }, { x: 4, y: 1 }],
+};
+const vacatedCell = step(movingPair, Action.WAIT);
+assert.deepEqual(vacatedCell.state.guards, [{ x: 2, y: 1 }, { x: 3, y: 1 }]);
+assert.deepEqual(vacatedCell.guardResults.map(({ guardIndex, outcome }) =>
+  ({ guardIndex, outcome })), [
+  { guardIndex: 0, outcome: "move" },
+  { guardIndex: 1, outcome: "move" },
+]);
+assert.equal(vacatedCell.guardResults[1].decision.direction, "left");
+
+// Guard 0 cannot enter Guard 1's cell. Guard 1 still acts from that resulting state.
+const occupiedPair = {
+  ...movingPair,
+  guards: [{ x: 3, y: 1 }, { x: 2, y: 1 }],
+};
+const occupied = step(occupiedPair, Action.WAIT);
+assert.deepEqual(occupied.state.guards, [{ x: 3, y: 1 }, { x: 1, y: 1 }]);
+assert.deepEqual(occupied.guardResults.map(({ outcome }) => outcome), ["blocked", "move"]);
+
+// Two Guards cannot swap: the first destination remains occupied and blocks it.
+const swapPair = {
+  ...movingPair,
+  player: { x: 4, y: 1 },
+  guards: [{ x: 2, y: 1 }, { x: 3, y: 1 }],
+};
+const noSwap = step(swapPair, Action.WAIT);
+assert.equal(noSwap.guardResults[0].outcome, "blocked");
+assert.notDeepEqual(noSwap.state.guards[0], noSwap.state.guards[1]);
+
+// A forced fall is blocked by a Guard below it, even on a cadence skip turn.
+const stacked = {
+  ...game(["#########", "#       #", "### - ###", "#########"],
+    { x: 1, y: 1 }, { x: 4, y: 1 }),
+  turn: 1,
+  guards: [{ x: 4, y: 1 }, { x: 4, y: 2 }],
+};
+const blockedFall = step(stacked, Action.WAIT, GuardCadence.EVERY_OTHER);
+assert.deepEqual(blockedFall.state.guards, stacked.guards);
+assert.deepEqual(blockedFall.guardResults.map(({ outcome }) => outcome), ["blocked", "skip"]);
+assert.equal(blockedFall.guardResults[0].decision.kind, "forced");
+const retriedFall = step(blockedFall.state, Action.WAIT, GuardCadence.EVERY_OTHER);
+assert.equal(retriedFall.guardResults[0].outcome, "blocked");
+
+// Supported Guards share the global cadence decision; unsupported Guards still fall.
+const mixedCadence = {
+  ...stacked,
+  guards: [{ x: 1, y: 1 }, { x: 4, y: 1 }],
+};
+const mixedSkip = step(mixedCadence, Action.WAIT, GuardCadence.EVERY_OTHER);
+assert.deepEqual(mixedSkip.guardResults.map(({ outcome }) => outcome), ["skip", "forced"]);
+
+const occupiedLadder = game(["### ###", "###H###", "###H###", "#######"],
+  { x: 3, y: 0 }, { x: 3, y: 2 });
+const blockedClimb = {
+  ...occupiedLadder,
+  guards: [{ x: 3, y: 2 }, { x: 3, y: 1 }],
+};
+const blockedUp = step(blockedClimb, Action.WAIT);
+assert.equal(blockedUp.guardResults[0].decision.direction, "up");
+assert.equal(blockedUp.guardResults[0].outcome, "blocked");
+assert.deepEqual(blockedUp.state.guards, [{ x: 3, y: 2 }, { x: 3, y: 0 }]);
+
+const emptyGuards = { ...onFloor, guards: [] };
+const emptyResult = step(emptyGuards, Action.WAIT);
+assert.deepEqual(emptyResult.state.guards, []);
+assert.deepEqual(emptyResult.guardResults, []);
+assert.equal(emptyResult.state.turn, emptyGuards.turn + 1);
+
+assert.deepEqual(step(structuredClone(movingPair), Action.WAIT), vacatedCell);
+assert.deepEqual(run(movingPair), run(structuredClone(movingPair)));
+assert.deepEqual(run(movingPair, GuardCadence.EVERY_OTHER),
+  run(structuredClone(movingPair), GuardCadence.EVERY_OTHER));
 
 console.log("World turn regression cases passed.");
