@@ -139,7 +139,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     guardResults,
     defeat: defeatMetadata,
   };
-  if (guardResults.length === 1) {
+  if (guardCount === 1) {
     result.guardOutcome = guardResults[0].outcome;
     result.guardDecision = guardResults[0].decision;
   }

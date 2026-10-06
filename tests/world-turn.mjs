@@ -266,6 +266,16 @@ assert.equal(playerFallDeath.state.status, "lost");
 assert.deepEqual(playerFallDeath.defeat, { phase: "player", guardIndex: 0 });
 assert.equal(playerFallDeath.guardPhase, false);
 
+const playerLadderContact = createSampleState({
+  tiles: ["#########", "###H#####", "###H#####", "#########"],
+  player: { x: 3, y: 2 }, guards: [{ x: 3, y: 1 }],
+});
+const playerLadderDeath = step(playerLadderContact, Action.UP);
+assert.equal(playerLadderDeath.kind, "accepted");
+assert.equal(playerLadderDeath.state.status, "lost");
+assert.deepEqual(playerLadderDeath.defeat, { phase: "player", guardIndex: 0 });
+assert.equal(playerLadderDeath.guardPhase, false);
+
 // A Guard entering the Player cell keeps its movement outcome and stops later Guards.
 const guardContact = {
   ...game(floor, { x: 3, y: 1 }, { x: 4, y: 1 }),
@@ -287,6 +297,36 @@ assert.equal(guardFallDeath.state.status, "lost");
 assert.equal(guardFallDeath.guardResults[0].outcome, "forced");
 assert.deepEqual(guardFallDeath.defeat, { phase: "guard", guardIndex: 0 });
 assert.deepEqual(guardFallDeath.state.guards[1], guardFallContact.guards[1]);
+
+const guardClimbContact = createSampleState({
+  tiles: ["#########", "###H#####", "###H#####", "#########"],
+  player: { x: 3, y: 1 }, guards: [{ x: 3, y: 2 }, { x: 7, y: 1 }],
+});
+const guardClimbDeath = step(guardClimbContact, Action.WAIT);
+assert.equal(guardClimbDeath.state.status, "lost");
+assert.equal(guardClimbDeath.guardResults[0].outcome, "move");
+assert.equal(guardClimbDeath.guardResults[0].decision.direction, "up");
+assert.deepEqual(guardClimbDeath.defeat, { phase: "guard", guardIndex: 0 });
+
+const guardDescendContact = createSampleState({
+  tiles: ["#########", "###H#####", "###H#####", "#       #", "#########"],
+  player: { x: 3, y: 3 }, guards: [{ x: 3, y: 2 }, { x: 7, y: 1 }],
+});
+const guardDescendDeath = step(guardDescendContact, Action.WAIT);
+assert.equal(guardDescendDeath.state.status, "lost");
+assert.equal(guardDescendDeath.guardResults[0].outcome, "move");
+assert.equal(guardDescendDeath.guardResults[0].decision.direction, "down");
+assert.deepEqual(guardDescendDeath.defeat, { phase: "guard", guardIndex: 0 });
+
+const guardBlockedWithoutContact = {
+  ...game(floor, { x: 7, y: 1 }, { x: 3, y: 1 }),
+  guards: [{ x: 3, y: 1 }, { x: 4, y: 1 }],
+};
+const blockedWithoutDefeat = step(guardBlockedWithoutContact, Action.WAIT);
+assert.equal(blockedWithoutDefeat.guardResults[0].outcome, "blocked");
+assert.equal(blockedWithoutDefeat.state.status, "playing");
+assert.equal(blockedWithoutDefeat.defeat, null);
+assert.equal(blockedWithoutDefeat.guardResults[1].outcome, "move");
 
 // Terminal is a same-identity no-op, distinct from rejected input.
 const terminal = step(playerDeath.state, Action.LEFT);
