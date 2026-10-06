@@ -2,7 +2,7 @@
 
 TMLDRNR は、Lode Runner に見られる決定論的な敵追跡を、小さなターン制盤面に移したパズルの実験プロジェクトです。敵の動きを読み、意図した経路へ誘導することが、短手数の独立したパズルとして成立するかを PoC で検証します。最終的にはモバイル Web 向けの製品を目指します。
 
-現在の画面では Player の基本移動、1 turn 1 マスの落下、成立した turn ごとの Guard 移動、turn 数を確認できます。勝敗判定や Undo はまだありません。
+現在の画面では Player の基本移動、1 turn 1 マスの落下、Guard phase の結果、turn 数を確認できます。Guard の通常移動は比較可能な cadence に従い、落下は毎成立 turn に進みます。勝敗判定や Undo はまだありません。
 
 ## 起動方法
 
@@ -26,4 +26,4 @@ Core の Player 移動回帰ケースは `node tests/core-step.mjs`、Guard AI �
 - `src/web/`: DOM 描画と keyboard / ボタン入力
 - `src/main.js`: stage、state、renderer、input の接続
 
-Core は UI event を受け取らず、Action を `step(state, action)` へ渡して決定論的に world turn を進めます。accepted / forced の Player 遷移後に Guard index 0 の phase を1回実行し、rejected では実行しません。結果の `guardPhase` と `guardDecision` から、その phase と判断を参照できます。Guard 単体の判断と遷移には `decideGuardMove(state, guardIndex)` と `stepGuard(state, guardIndex)` を利用します。衝突、勝敗、Undo と複数 Guard の更新順は後続 issue の対象です。
+Core は UI event を受け取らず、Action を `step(state, action, cadence)` へ渡して決定論的に world turn を進めます。accepted / forced の Player 遷移後に Guard index 0 の phase を評価し、rejected では評価しません。unsupported Guard は毎 turn 1 マス落下し、supported Guard の通常移動だけを cadence で間引きます。`GuardCadence.EVERY_TURN`（1:1、Web が使う既定値）、`TWO_OF_THREE`（2:3）、`EVERY_OTHER`（1:2）を選べます。2:3 は3の倍数 turn、1:2 は偶数 turn を skip します。結果の `guardPhase`、`guardOutcome`、`guardDecision` から、forced fall、通常移動、cadence skip、AI stay を再計算なしで区別できます。Guard 単体の判断と遷移には `decideGuardMove(state, guardIndex)` と `stepGuard(state, guardIndex)` を利用します。PoC の最終 cadence、衝突、勝敗、Undo と複数 Guard の更新順は後続 issue の対象です。

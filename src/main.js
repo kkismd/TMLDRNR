@@ -22,7 +22,8 @@ function render() {
 
 function showResult(label, result) {
   state = result.state;
-  const guard = result.guardPhase ? `; Guard ${result.guardDecision.direction}` : "";
+  const guard = result.guardOutcome === "skip" ? "; Guard skip" :
+    result.guardPhase ? `; Guard ${result.guardDecision.direction}` : "";
   resultOutput.value = `${label} (${result.kind}${guard})`;
   render();
 }
