@@ -40,22 +40,18 @@ function showResult(label, result) {
 }
 
 render();
-bindInput(document.querySelector(".controls"), {
-  onAction(action) {
-    showResult(action, session.play(action));
-  },
-  onContinue() {
-    if (session.state.status !== "playing" || isSupported(session.state)) return;
-    showResult("continue", session.play(Action.WAIT));
-  },
-  onUndo() {
+bindInput(document.querySelector(".controls"), (action) => {
+  showResult(action, session.play(action));
+}, () => {
+  if (session.state.status !== "playing" || isSupported(session.state)) return;
+  showResult("continue", session.play(Action.WAIT));
+}, (command) => {
+  if (command === "undo") {
     session.undo();
     resultOutput.value = "UNDO";
-    render();
-  },
-  onRestart() {
+  } else if (command === "restart") {
     session.restart();
     resultOutput.value = "RESTART";
-    render();
-  },
+  }
+  render();
 });

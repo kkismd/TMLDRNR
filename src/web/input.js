@@ -16,7 +16,7 @@ const buttonActions = {
   wait: Action.WAIT,
 };
 
-export function bindInput(controls, { onAction, onContinue, onUndo, onRestart }) {
+export function bindInput(controls, onAction, onContinue = onAction, onCommand = () => {}) {
   document.addEventListener("keydown", (event) => {
     if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
     const action = keyActions[event.code];
@@ -30,12 +30,8 @@ export function bindInput(controls, { onAction, onContinue, onUndo, onRestart })
     const button = event.target.closest("button[data-action], button[data-command]");
     if (!button || !controls.contains(button) || button.disabled) return;
 
-    if (button.dataset.command === "undo") {
-      onUndo();
-      return;
-    }
-    if (button.dataset.command === "restart") {
-      onRestart();
+    if (button.dataset.command) {
+      onCommand(button.dataset.command);
       return;
     }
 
