@@ -1,6 +1,6 @@
 import { decideGuardMove, stepGuard } from "./guard-ai.js";
 import { stepPlayer } from "./player-step.js";
-import { isSupported } from "./terrain.js";
+import { isSupported, tileAt } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
 
@@ -44,7 +44,7 @@ function guardActsOnTurn(turn, guardCount, cadence) {
 }
 
 export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
-  if (state.status === "lost") {
+  if (state.status === "lost" || state.status === "won") {
     return {
       state,
       kind: "terminal",
@@ -53,6 +53,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
       guardOutcome: null,
       guardDecision: null,
       defeat: null,
+      clear: null,
     };
   }
 
@@ -65,6 +66,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
       guardOutcome: null,
       guardDecision: null,
       defeat: null,
+      clear: null,
     };
   }
 
@@ -77,6 +79,21 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
       guardResults: [],
       guardOutcome: null,
       guardDecision: null,
+      clear: null,
+    };
+  }
+
+  if (tileAt(playerResult.state, playerResult.state.player.x,
+    playerResult.state.player.y) === "E") {
+    return {
+      ...playerResult,
+      state: { ...playerResult.state, status: "won" },
+      guardPhase: false,
+      guardResults: [],
+      guardOutcome: null,
+      guardDecision: null,
+      defeat: null,
+      clear: { phase: "player" },
     };
   }
 
@@ -138,6 +155,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     guardPhase: true,
     guardResults,
     defeat: defeatMetadata,
+    clear: null,
   };
   if (guardCount === 1) {
     result.guardOutcome = guardResults[0].outcome;
