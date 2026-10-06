@@ -18,6 +18,15 @@ body { margin: 0; }
 h1 { margin: 0; font-size: 1.6rem; }
 h2 { margin: 1.25rem 0 .5rem; font-size: 1rem; }
 p { margin: .5rem 0; }
+label { display: inline-flex; align-items: center; gap: .5rem; }
+select {
+  min-height: 2.25rem;
+  border: 1px solid #72858d;
+  border-radius: .4rem;
+  background: #293b47;
+  color: inherit;
+  font: inherit;
+}
 header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
 
 .board {
