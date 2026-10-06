@@ -22,8 +22,11 @@ function render() {
 
 function showResult(label, result) {
   state = result.state;
-  const guard = result.guardOutcome === "skip" ? "; Guard skip" :
-    result.guardPhase ? `; Guard ${result.guardDecision.direction}` : "";
+  const guard = result.guardResults.length
+    ? `; ${result.guardResults.map(({ guardIndex, outcome, decision }) =>
+      `G${guardIndex} ${outcome}${decision ? ` (${decision.direction})` : ""}`,
+    ).join(", ")}`
+    : "";
   resultOutput.value = `${label} (${result.kind}${guard})`;
   render();
 }
