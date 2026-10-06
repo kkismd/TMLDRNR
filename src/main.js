@@ -17,8 +17,9 @@ function render() {
   turnOutput.value = String(state.turn);
   const supported = isSupported(state);
   statusOutput.value = state.status === "lost" ? "LOST" :
+    state.status === "won" ? "CLEAR" :
     supported ? "READY" : "FALL — 次の落下を進めてください";
-  continueButton.disabled = state.status === "lost" || supported;
+  continueButton.disabled = state.status === "lost" || state.status === "won" || supported;
 }
 
 function showResult(label, result) {
@@ -31,7 +32,8 @@ function showResult(label, result) {
   const defeat = result.defeat
     ? `; LOST (${result.defeat.phase} G${result.defeat.guardIndex})`
     : "";
-  resultOutput.value = `${label} (${result.kind}${guard}${defeat})`;
+  const clear = result.clear ? "; CLEAR" : "";
+  resultOutput.value = `${label} (${result.kind}${guard}${defeat}${clear})`;
   render();
 }
 

@@ -3,6 +3,7 @@ import { Action } from "../src/core/actions.js";
 import { decideGuardMove } from "../src/core/guard-ai.js";
 import { createSampleState } from "../src/core/state.js";
 import { GuardCadence, step } from "../src/core/step.js";
+import { isSupported, isTraversable } from "../src/core/terrain.js";
 import { sampleStage } from "../src/stages.js";
 
 function game(tiles, player, guard) {
@@ -36,6 +37,7 @@ const rejected = check(atWall, Action.LEFT, "rejected", { x: 1, y: 1 },
   { x: 5, y: 1 }, null, null);
 assert.strictEqual(rejected.state, atWall);
 assert.equal(rejected.guardDecision, null);
+assert.equal(rejected.clear, null);
 const twoGuards = { ...onFloor, guards: [...onFloor.guards, { x: 7, y: 1 }] };
 assert.deepEqual(step(twoGuards, Action.WAIT).state.guards[1], { x: 6, y: 1 });
 
@@ -256,6 +258,7 @@ assert.equal(playerDeath.state.turn, 1);
 assert.equal(playerDeath.guardPhase, false);
 assert.deepEqual(playerDeath.guardResults, []);
 assert.deepEqual(playerDeath.defeat, { phase: "player", guardIndex: 0 });
+assert.equal(playerDeath.clear, null);
 
 const playerFallContact = createSampleState({
   tiles: ["#########", "#       #", "#       #", "#########"],
@@ -287,6 +290,7 @@ assert.equal(guardDeath.state.status, "lost");
 assert.deepEqual(guardDeath.state.guards, [{ x: 3, y: 1 }, { x: 7, y: 1 }]);
 assert.deepEqual(guardDeath.guardResults.map(({ outcome }) => outcome), ["move"]);
 assert.deepEqual(guardDeath.defeat, { phase: "guard", guardIndex: 0 });
+assert.equal(guardDeath.clear, null);
 assert.equal(guardDeath.state.turn, guardContact.turn + 1);
 
 const guardFallContact = createSampleState({
@@ -336,8 +340,104 @@ assert.strictEqual(terminal.state, playerDeath.state);
 assert.equal(terminal.guardPhase, false);
 assert.deepEqual(terminal.guardResults, []);
 assert.equal(terminal.defeat, null);
+assert.equal(terminal.clear, null);
 assert.equal(terminal.state.turn, 1);
 assert.deepEqual(step(structuredClone(playerContact), Action.RIGHT), playerDeath);
+
+// Goal is checked after Player collision and before any Guard decision.
+const goalTiles = ["#######", "# E   #", "#######"];
+const horizontalGoal = game(goalTiles, { x: 1, y: 1 }, { x: 5, y: 1 });
+const horizontalClear = step(horizontalGoal, Action.RIGHT);
+assert.equal(horizontalClear.kind, "accepted");
+assert.deepEqual(horizontalClear.state.player, { x: 2, y: 1 });
+assert.equal(horizontalClear.state.status, "won");
+assert.equal(horizontalClear.state.turn, 1);
+assert.deepEqual(horizontalClear.state.guards, horizontalGoal.guards);
+assert.equal(horizontalClear.guardPhase, false);
+assert.deepEqual(horizontalClear.guardResults, []);
+assert.equal(horizontalClear.guardOutcome, null);
+assert.equal(horizontalClear.guardDecision, null);
+assert.equal(horizontalClear.defeat, null);
+assert.deepEqual(horizontalClear.clear, { phase: "player" });
+
+const ladderGoal = game(["#######", "###E###", "###H###", "###H###", "#######"],
+  { x: 3, y: 2 }, { x: 5, y: 3 });
+const ladderClear = step(ladderGoal, Action.UP);
+assert.equal(ladderClear.kind, "accepted");
+assert.deepEqual(ladderClear.state.player, { x: 3, y: 1 });
+assert.equal(ladderClear.state.status, "won");
+assert.equal(ladderClear.state.turn, 1);
+assert.deepEqual(ladderClear.state.guards, ladderGoal.guards);
+assert.equal(ladderClear.guardPhase, false);
+assert.deepEqual(ladderClear.clear, { phase: "player" });
+
+const fallingGoal = game(["#######", "#     #", "# E   #", "#######"],
+  { x: 2, y: 1 }, { x: 5, y: 1 });
+assert.equal(isSupported(fallingGoal), false);
+const fallClear = step(fallingGoal, Action.WAIT);
+assert.equal(fallClear.kind, "forced");
+assert.deepEqual(fallClear.state.player, { x: 2, y: 2 });
+assert.equal(fallClear.state.status, "won");
+assert.equal(fallClear.state.turn, 1);
+assert.deepEqual(fallClear.state.guards, fallingGoal.guards);
+assert.equal(fallClear.guardPhase, false);
+assert.deepEqual(fallClear.clear, { phase: "player" });
+
+const onGoal = game(goalTiles, { x: 2, y: 1 }, { x: 5, y: 1 });
+const waitClear = step(onGoal, Action.WAIT);
+assert.equal(waitClear.kind, "accepted");
+assert.deepEqual(waitClear.state.player, onGoal.player);
+assert.equal(waitClear.state.turn, 1);
+assert.equal(waitClear.state.status, "won");
+assert.equal(waitClear.guardPhase, false);
+assert.deepEqual(waitClear.clear, { phase: "player" });
+
+// Rejected actions do not check an E tile, even when the initial Player is on it.
+const rejectedOnGoal = step(onGoal, Action.UP);
+assert.equal(rejectedOnGoal.kind, "rejected");
+assert.strictEqual(rejectedOnGoal.state, onGoal);
+assert.equal(rejectedOnGoal.state.turn, 0);
+assert.equal(rejectedOnGoal.guardPhase, false);
+assert.equal(rejectedOnGoal.defeat, null);
+assert.equal(rejectedOnGoal.clear, null);
+
+const guardedGoal = game(goalTiles, { x: 1, y: 1 }, { x: 2, y: 1 });
+const goalCollision = step(guardedGoal, Action.RIGHT);
+assert.equal(goalCollision.kind, "accepted");
+assert.deepEqual(goalCollision.state.player, { x: 2, y: 1 });
+assert.equal(goalCollision.state.status, "lost");
+assert.equal(goalCollision.state.turn, 1);
+assert.deepEqual(goalCollision.state.guards, guardedGoal.guards);
+assert.deepEqual(goalCollision.defeat, { phase: "player", guardIndex: 0 });
+assert.equal(goalCollision.clear, null);
+assert.equal(goalCollision.guardPhase, false);
+assert.deepEqual(goalCollision.guardResults, []);
+
+const twoGuardGoal = { ...horizontalGoal, guards: [
+  { x: 4, y: 1 }, { x: 5, y: 1 },
+] };
+const twoGuardClear = step(twoGuardGoal, Action.RIGHT);
+assert.deepEqual(twoGuardClear.state.guards, twoGuardGoal.guards);
+assert.deepEqual(twoGuardClear.guardResults, []);
+assert.equal(twoGuardClear.state.turn, 1);
+
+const wonTerminal = step(horizontalClear.state, Action.LEFT);
+assert.equal(wonTerminal.kind, "terminal");
+assert.strictEqual(wonTerminal.state, horizontalClear.state);
+assert.equal(wonTerminal.state.turn, 1);
+assert.equal(wonTerminal.guardPhase, false);
+assert.deepEqual(wonTerminal.guardResults, []);
+assert.equal(wonTerminal.defeat, null);
+assert.equal(wonTerminal.clear, null);
+assert.notEqual(wonTerminal.kind, rejectedOnGoal.kind);
+
+assert.equal(step(onFloor, Action.WAIT).clear, null);
+assert.deepEqual(step(structuredClone(horizontalGoal), Action.RIGHT), horizontalClear);
+assert.deepEqual(step(structuredClone(fallingGoal), Action.WAIT,
+  GuardCadence.EVERY_OTHER), step(fallingGoal, Action.WAIT, GuardCadence.EVERY_OTHER));
+assert.equal(isTraversable(horizontalGoal, 2, 1), true);
+assert.equal(isSupported(game(["#######", "# E   #", "#     #", "#######"],
+  { x: 2, y: 1 }, { x: 5, y: 1 })), false);
 
 // The browser sample keeps a two-ladder route choice visible from one shared turn.
 assert.deepEqual(sampleStage.tiles, [
