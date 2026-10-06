@@ -16,7 +16,7 @@ const buttonActions = {
   wait: Action.WAIT,
 };
 
-export function bindInput(controls, onAction, onContinue = onAction) {
+export function bindInput(controls, onAction, onContinue = onAction, onCommand = () => {}) {
   document.addEventListener("keydown", (event) => {
     if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
     const action = keyActions[event.code];
@@ -27,14 +27,20 @@ export function bindInput(controls, onAction, onContinue = onAction) {
   });
 
   controls.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-action]");
-    if (!button || !controls.contains(button)) return;
+    const button = event.target.closest("button[data-action], button[data-command]");
+    if (!button || !controls.contains(button) || button.disabled) return;
+
+    if (button.dataset.command) {
+      onCommand(button.dataset.command);
+      return;
+    }
 
     if (button.dataset.action === "continue") {
       onContinue();
       return;
     }
 
-    onAction(buttonActions[button.dataset.action]);
+    const action = buttonActions[button.dataset.action];
+    if (action) onAction(action);
   });
 }
