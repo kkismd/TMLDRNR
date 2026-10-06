@@ -8,9 +8,10 @@ export const GuardCadence = Object.freeze({
   EVERY_TURN: "1:1",
   TWO_OF_THREE: "2:3",
   EVERY_OTHER: "1:2",
+  BY_GUARD_COUNT: "1:guard-count",
 });
 
-function guardActsOnTurn(turn, cadence) {
+function guardActsOnTurn(turn, guardCount, cadence) {
   switch (cadence) {
     case GuardCadence.EVERY_TURN:
       return true;
@@ -18,6 +19,8 @@ function guardActsOnTurn(turn, cadence) {
       return turn % 3 !== 0;
     case GuardCadence.EVERY_OTHER:
       return turn % 2 === 1;
+    case GuardCadence.BY_GUARD_COUNT:
+      return (turn - 1) % guardCount === 0;
     default:
       throw new RangeError(`Invalid Guard cadence: ${cadence}`);
   }
@@ -31,7 +34,8 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
 
   const guard = playerResult.state.guards[0];
   if (!guard) throw new RangeError("Invalid guard index: 0");
-  if (isSupported(playerResult.state, guard) && !guardActsOnTurn(playerResult.state.turn, cadence)) {
+  if (isSupported(playerResult.state, guard) &&
+      !guardActsOnTurn(playerResult.state.turn, playerResult.state.guards.length, cadence)) {
     return {
       ...playerResult,
       guardPhase: true,
