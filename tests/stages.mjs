@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { step } from "../src/core/step.js";
-import { selectorSmokeStage, stages } from "../src/stages.js";
+import {
+  leftTieQuirkStage,
+  lureFirstStage,
+  sameRowChaseStage,
+  selectorSmokeStage,
+  stages,
+  waitSyncStage,
+} from "../src/stages.js";
 
 assert.ok(stages.length > 0, "stage catalog must not be empty");
 
@@ -59,6 +66,111 @@ assert.deepEqual(sample.knownSolution, [
   Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
   Action.RIGHT, Action.RIGHT, Action.RIGHT,
 ]);
+
+const validationStages = [
+  sameRowChaseStage,
+  sample,
+  lureFirstStage,
+  waitSyncStage,
+  leftTieQuirkStage,
+];
+assert.deepEqual(validationStages.map(({ id }) => id), [
+  "same-row-chase",
+  "two-ladders",
+  "lure-first",
+  "wait-sync",
+  "left-tie-quirk",
+]);
+assert.deepEqual(stages.map(({ id }) => id), [
+  "same-row-chase",
+  "two-ladders",
+  "lure-first",
+  "wait-sync",
+  "left-tie-quirk",
+  "selector-smoke",
+]);
+const expectedSolutions = new Map([
+  [sameRowChaseStage.id, [Action.RIGHT, Action.RIGHT, Action.UP, Action.RIGHT, Action.RIGHT]],
+  [sample.id, [
+    Action.RIGHT,
+    Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+  ]],
+  [lureFirstStage.id, [
+    Action.LEFT, Action.RIGHT, Action.RIGHT,
+    Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+  ]],
+  [waitSyncStage.id, [
+    Action.WAIT,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
+    Action.LEFT, Action.LEFT, Action.LEFT,
+    Action.UP,
+  ]],
+  [leftTieQuirkStage.id, [
+    Action.RIGHT,
+    Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT,
+  ]],
+]);
+
+const expectedInitialStates = new Map([
+  ["same-row-chase", { player: { x: 1, y: 2 }, guards: [{ x: 6, y: 2 }] }],
+  ["two-ladders", { player: { x: 2, y: 7 }, guards: [{ x: 10, y: 7 }] }],
+  ["lure-first", { player: { x: 2, y: 7 }, guards: [{ x: 3, y: 2 }] }],
+  ["wait-sync", { player: { x: 9, y: 1 }, guards: [{ x: 8, y: 2 }] }],
+  ["left-tie-quirk", { player: { x: 8, y: 7 }, guards: [{ x: 6, y: 2 }] }],
+]);
+const solutionResults = new Map();
+for (const stage of validationStages) {
+  assert.deepEqual(stage.knownSolution, expectedSolutions.get(stage.id),
+    `${stage.id}: knownSolution must match the designed sequence`);
+  assert.equal(stage.tiles.length, 9, `${stage.id}: stage height must be 9`);
+  assert.ok(stage.tiles.every((row) => row.length === 13),
+    `${stage.id}: every row must be 13 cells wide`);
+  assert.equal(stage.guards.length, 1, `${stage.id}: validation stage must have one Guard`);
+  assert.deepEqual(
+    { player: stage.player, guards: stage.guards },
+    expectedInitialStates.get(stage.id),
+    `${stage.id}: initial actors must match the designed stage`,
+  );
+
+  let state = createSampleState(stage);
+  const results = [];
+  for (const action of stage.knownSolution) {
+    const result = step(state, action);
+    results.push(result);
+    state = result.state;
+  }
+  solutionResults.set(stage.id, results);
+}
+
+const sameRowResults = solutionResults.get(sameRowChaseStage.id);
+assert.equal(sameRowResults[0].guardDecision.direction, "left");
+assert.equal(sameRowResults[1].guardDecision.direction, "left");
+assert.equal(sameRowResults.at(-1).kind, "forced");
+assert.equal(sameRowResults.at(-1).state.status, "won");
+
+const lureResults = solutionResults.get(lureFirstStage.id);
+assert.equal(lureFirstStage.knownSolution[0], Action.LEFT);
+assert.deepEqual(lureResults[0].state.guards[0], { x: 3, y: 3 });
+assert.deepEqual(lureResults[1].state.guards[0], { x: 3, y: 4 });
+assert.deepEqual(lureResults[2].state.guards[0], { x: 2, y: 4 });
+assert.equal(lureResults.at(-1).state.status, "won");
+
+const waitResults = solutionResults.get(waitSyncStage.id);
+assert.equal(waitSyncStage.knownSolution[0], Action.WAIT);
+assert.deepEqual(waitResults[0].state.guards[0], { x: 9, y: 2 });
+assert.equal(waitResults[2].kind, "forced");
+assert.deepEqual(waitResults[2].state.player, { x: 8, y: 2 });
+assert.deepEqual(waitResults[2].state.guards[0], { x: 9, y: 2 });
+assert.equal(waitResults.at(-1).state.status, "won");
+
+const tieResults = solutionResults.get(leftTieQuirkStage.id);
+assert.deepEqual(tieResults.slice(0, 3).map(({ guardDecision }) => guardDecision.direction),
+  ["left", "left", "left"]);
+assert.equal(tieResults[3].guardDecision.direction, "down");
+assert.equal(tieResults.at(-1).state.status, "won");
 
 assert.ok(stages.includes(selectorSmokeStage), "catalog must contain the selector smoke fixture");
 assert.equal(selectorSmokeStage.tiles.length, 9);
