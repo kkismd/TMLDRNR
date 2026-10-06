@@ -1,4 +1,5 @@
 import { Action } from "./actions.js";
+import { stepGuard } from "./guard-ai.js";
 import { tileAt, isSupported, isTraversable } from "./terrain.js";
 
 const ladderTile = "H";
@@ -23,7 +24,7 @@ function rejected(state) {
   return { state, kind: "rejected" };
 }
 
-export function step(state, action) {
+function stepPlayer(state, action) {
   const { x, y } = state.player;
   const below = tileAt(state, x, y + 1);
 
@@ -65,4 +66,19 @@ export function step(state, action) {
     default:
       return rejected(state);
   }
+}
+
+export function step(state, action) {
+  const playerResult = stepPlayer(state, action);
+  if (playerResult.kind === "rejected") {
+    return { ...playerResult, guardPhase: false, guardDecision: null };
+  }
+
+  const guardResult = stepGuard(playerResult.state, 0);
+  return {
+    state: guardResult.state,
+    kind: playerResult.kind,
+    guardPhase: true,
+    guardDecision: guardResult.decision,
+  };
 }
