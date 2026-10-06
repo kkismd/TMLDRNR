@@ -4,7 +4,7 @@ import { isSupported } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
 
-export function isGuardOccupied(state, x, y, exceptGuardIndex) {
+function isGuardOccupied(state, x, y, exceptGuardIndex) {
   return state.guards.some((guard, index) =>
     index !== exceptGuardIndex && guard.x === x && guard.y === y);
 }

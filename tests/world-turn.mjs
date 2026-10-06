@@ -219,6 +219,17 @@ assert.equal(blockedUp.guardResults[0].decision.direction, "up");
 assert.equal(blockedUp.guardResults[0].outcome, "blocked");
 assert.deepEqual(blockedUp.state.guards, [{ x: 3, y: 2 }, { x: 3, y: 0 }]);
 
+const occupiedLowerLadder = game(["### ###", "###H###", "###H###", "### ###", "#######"],
+  { x: 3, y: 3 }, { x: 3, y: 1 });
+const blockedDescent = {
+  ...occupiedLowerLadder,
+  guards: [{ x: 3, y: 1 }, { x: 3, y: 2 }],
+};
+const blockedDown = step(blockedDescent, Action.WAIT);
+assert.equal(blockedDown.guardResults[0].decision.direction, "down");
+assert.equal(blockedDown.guardResults[0].outcome, "blocked");
+assert.deepEqual(blockedDown.state.guards, [{ x: 3, y: 1 }, { x: 3, y: 3 }]);
+
 const emptyGuards = { ...onFloor, guards: [] };
 const emptyResult = step(emptyGuards, Action.WAIT);
 assert.deepEqual(emptyResult.state.guards, []);
