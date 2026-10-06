@@ -1,68 +1,56 @@
-import { Action } from "./actions.js";
-import { tileAt, isSupported, isTraversable } from "./terrain.js";
-
-const ladderTile = "H";
-const ropeTile = "-";
-const validActions = new Set(Object.values(Action));
+import { stepGuard } from "./guard-ai.js";
+import { stepPlayer } from "./player-step.js";
+import { isSupported } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
 
-function movedState(state, x, y) {
-  return {
-    ...state,
-    player: { x, y },
-    turn: state.turn + 1,
-  };
-}
+export const GuardCadence = Object.freeze({
+  EVERY_TURN: "1:1",
+  TWO_OF_THREE: "2:3",
+  EVERY_OTHER: "1:2",
+  BY_GUARD_COUNT: "1:guard-count",
+});
 
-function accepted(state, x = state.player.x, y = state.player.y) {
-  return { state: movedState(state, x, y), kind: "accepted" };
-}
-
-function rejected(state) {
-  return { state, kind: "rejected" };
-}
-
-export function step(state, action) {
-  const { x, y } = state.player;
-  const below = tileAt(state, x, y + 1);
-
-  if (!isSupported(state)) {
-    if (!isTraversable(state, x, y + 1)) {
-      throw new Error("Invalid game state: unsupported player cannot fall into the board below.");
-    }
-    return { state: movedState(state, x, y + 1), kind: "forced" };
-  }
-
-  if (!validActions.has(action)) return rejected(state);
-
-  switch (action) {
-    case Action.LEFT:
-    case Action.RIGHT: {
-      const nextX = x + (action === Action.LEFT ? -1 : 1);
-      return isTraversable(state, nextX, y) ? accepted(state, nextX, y) : rejected(state);
-    }
-    case Action.UP: {
-      const nextY = y - 1;
-      if ((tileAt(state, x, y) === ladderTile || tileAt(state, x, nextY) === ladderTile) &&
-          isTraversable(state, x, nextY)) {
-        return accepted(state, x, nextY);
-      }
-      return rejected(state);
-    }
-    case Action.DOWN: {
-      const current = tileAt(state, x, y);
-      const nextY = y + 1;
-      const canDescendRope = current === ropeTile;
-      const canDescendLadder = current === ladderTile || below === ladderTile;
-      if ((canDescendRope || canDescendLadder) && isTraversable(state, x, nextY)) {
-        return accepted(state, x, nextY);
-      }
-      return rejected(state);
-    }
-    case Action.WAIT:
-      return accepted(state);
+function guardActsOnTurn(turn, guardCount, cadence) {
+  switch (cadence) {
+    case GuardCadence.EVERY_TURN:
+      return true;
+    case GuardCadence.TWO_OF_THREE:
+      return turn % 3 !== 0;
+    case GuardCadence.EVERY_OTHER:
+      return turn % 2 === 1;
+    case GuardCadence.BY_GUARD_COUNT:
+      return (turn - 1) % guardCount === 0;
     default:
-      return rejected(state);
+      throw new RangeError(`Invalid Guard cadence: ${cadence}`);
   }
+}
+
+export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
+  const playerResult = stepPlayer(state, action);
+  if (playerResult.kind === "rejected") {
+    return { ...playerResult, guardPhase: false, guardOutcome: null, guardDecision: null };
+  }
+
+  const guard = playerResult.state.guards[0];
+  if (!guard) throw new RangeError("Invalid guard index: 0");
+  if (isSupported(playerResult.state, guard) &&
+      !guardActsOnTurn(playerResult.state.turn, playerResult.state.guards.length, cadence)) {
+    return {
+      ...playerResult,
+      guardPhase: true,
+      guardOutcome: "skip",
+      guardDecision: null,
+    };
+  }
+
+  const guardResult = stepGuard(playerResult.state, 0);
+  return {
+    state: guardResult.state,
+    kind: playerResult.kind,
+    guardPhase: true,
+    guardOutcome: guardResult.decision.kind === "forced" ? "forced" :
+      guardResult.decision.kind === "stay" ? "stay" : "move",
+    guardDecision: guardResult.decision,
+  };
 }

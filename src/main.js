@@ -20,16 +20,18 @@ function render() {
   continueButton.disabled = supported;
 }
 
+function showResult(label, result) {
+  state = result.state;
+  const guard = result.guardOutcome === "skip" ? "; Guard skip" :
+    result.guardPhase ? `; Guard ${result.guardDecision.direction}` : "";
+  resultOutput.value = `${label} (${result.kind}${guard})`;
+  render();
+}
+
 render();
 bindInput(document.querySelector(".controls"), (action) => {
-  const result = step(state, action);
-  state = result.state;
-  resultOutput.value = `${action} (${result.kind})`;
-  render();
+  showResult(action, step(state, action));
 }, () => {
   if (isSupported(state)) return;
-  const result = step(state, Action.WAIT);
-  state = result.state;
-  resultOutput.value = `continue (${result.kind})`;
-  render();
+  showResult("continue", step(state, Action.WAIT));
 });

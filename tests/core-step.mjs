@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
-import { isSupported, step } from "../src/core/step.js";
+import { stepPlayer as step } from "../src/core/player-step.js";
+import { isSupported } from "../src/core/terrain.js";
 
 function state(rows, player) {
   return createSampleState({ tiles: rows, player, guards: [{ x: 1, y: 1 }] });
