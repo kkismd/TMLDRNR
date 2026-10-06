@@ -1,17 +1,27 @@
 import { isSupported } from "./core/step.js";
 import { Action } from "./core/actions.js";
-import { sampleStage } from "./stages.js";
+import { stages } from "./stages.js";
 import { bindInput } from "./web/input.js";
 import { renderBoard } from "./web/render.js";
 import { createSession } from "./web/session.js";
 
-const session = createSession(sampleStage);
+let selectedStage = stages[0];
+let session = createSession(selectedStage);
 const board = document.querySelector("#board");
+const stageSelect = document.querySelector("#stage-select");
 const turnOutput = document.querySelector("#turn");
 const resultOutput = document.querySelector("#last-action");
 const statusOutput = document.querySelector("#status");
 const continueButton = document.querySelector("[data-action='continue']");
 const undoButton = document.querySelector("[data-command='undo']");
+
+for (const stage of stages) {
+  const option = document.createElement("option");
+  option.value = stage.id;
+  option.textContent = stage.title;
+  stageSelect.append(option);
+}
+stageSelect.value = selectedStage.id;
 
 function render() {
   const state = session.state;
@@ -40,6 +50,12 @@ function showResult(label, result) {
 }
 
 render();
+stageSelect.addEventListener("change", () => {
+  selectedStage = stages.find(({ id }) => id === stageSelect.value);
+  session = createSession(selectedStage);
+  resultOutput.value = "STAGE CHANGE";
+  render();
+});
 bindInput(document.querySelector(".controls"), (action) => {
   showResult(action, session.play(action));
 }, () => {
