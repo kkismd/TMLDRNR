@@ -1,5 +1,11 @@
 export function tileAt(state, x, y) {
   if (x < 0 || y < 0 || x >= state.width || y >= state.height) return undefined;
+  if ((state.holes ?? []).some((hole) => hole.x === x && hole.y === y)) return " ";
+  return state.tiles[y][x];
+}
+
+export function baseTileAt(state, x, y) {
+  if (x < 0 || y < 0 || x >= state.width || y >= state.height) return undefined;
   return state.tiles[y][x];
 }
 

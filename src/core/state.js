@@ -6,6 +6,7 @@ export function createSampleState(stage) {
     player: { ...stage.player },
     guards: stage.guards.map((guard) => ({ ...guard })),
     gold: stage.gold ? stage.gold.map((position) => ({ ...position })) : [],
+    holes: [],
     turn: 0,
     status: "playing",
   };

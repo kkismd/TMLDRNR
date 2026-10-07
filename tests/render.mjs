@@ -43,4 +43,11 @@ renderBoard(board, activeState);
 assert.ok(board.children.some(({ className }) => className.includes("tile--goal-active")));
 assert.ok(!board.children.some(({ className }) => className === "tile tile--gold"));
 
+renderBoard(board, { ...activeState, holes: [{ x: 2, y: 1, remaining: 2 }] });
+assert.ok(board.children.some(({ className, textContent }) =>
+  className.includes("tile--hole") && textContent === "○"));
+renderBoard(board, { ...activeState, holes: [{ x: 2, y: 1, remaining: 1 }] });
+assert.ok(board.children.some(({ className, textContent }) =>
+  className.includes("tile--hole-warning") && textContent === "◌"));
+
 console.log("Renderer objective display cases passed.");
