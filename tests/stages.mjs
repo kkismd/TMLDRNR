@@ -17,7 +17,37 @@ assert.ok(stages.length > 0, "stage catalog must not be empty");
 const ids = new Set();
 const actionValues = new Set(Object.values(Action));
 
+function validateGold(stage) {
+  if (stage.gold === undefined) return;
+  assert.ok(Array.isArray(stage.gold), `${stage.id}: gold must be an array`);
+  const occupied = new Set([
+    `${stage.player.x},${stage.player.y}`,
+    ...stage.guards.map(({ x, y }) => `${x},${y}`),
+  ]);
+  const seen = new Set();
+  const goals = new Set();
+  for (const [y, row] of stage.tiles.entries()) {
+    for (const [x, tile] of [...row].entries()) {
+      if (tile === "E") goals.add(`${x},${y}`);
+    }
+  }
+  for (const [index, position] of stage.gold.entries()) {
+    assert.ok(position && Number.isInteger(position.x) && Number.isInteger(position.y),
+      `${stage.id}: gold[${index}] must be a position`);
+    const { x, y } = position;
+    const key = `${x},${y}`;
+    assert.ok(x >= 0 && y >= 0 && y < stage.tiles.length && x < stage.tiles[0].length,
+      `${stage.id}: gold[${index}] must be in bounds`);
+    assert.notEqual(stage.tiles[y][x], "#", `${stage.id}: gold[${index}] must be traversable`);
+    assert.ok(!seen.has(key), `${stage.id}: gold positions must be unique`);
+    assert.ok(!occupied.has(key), `${stage.id}: gold cannot overlap an initial actor`);
+    assert.ok(!goals.has(key), `${stage.id}: gold cannot overlap a Goal`);
+    seen.add(key);
+  }
+}
+
 for (const stage of stages) {
+  validateGold(stage);
   assert.equal(typeof stage.id, "string", "stage id must be a string");
   assert.ok(stage.id.trim().length > 0, "stage id must not be empty");
   assert.ok(!ids.has(stage.id), `duplicate stage id: ${stage.id}`);
@@ -58,6 +88,25 @@ for (const stage of stages) {
     state = result.state;
   }
   assert.equal(state.status, "won", `${stage.id}: knownSolution must finish won`);
+}
+
+const goldValidationBase = {
+  id: "gold-validation",
+  tiles: ["######", "# E  #", "######"],
+  player: { x: 1, y: 1 },
+  guards: [{ x: 4, y: 1 }],
+};
+for (const invalidGold of [
+  "not-an-array",
+  [{ x: 2, y: 0 }],
+  [{ x: 6, y: 1 }],
+  [{ x: 0, y: 1 }],
+  [{ x: 2, y: 1 }],
+  [{ x: 1, y: 1 }],
+  [{ x: 4, y: 1 }],
+  [{ x: 3, y: 1 }, { x: 3, y: 1 }],
+]) {
+  assert.throws(() => validateGold({ ...goldValidationBase, gold: invalidGold }));
 }
 
 const sample = stages.find(({ id }) => id === "two-ladders");

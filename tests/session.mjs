@@ -115,4 +115,21 @@ assert.strictEqual(cadence.undo(), cadencePreState);
 assert.equal(cadence.state.turn, 1);
 assert.deepEqual(cadence.play(Action.UP), cadenceResult);
 
+const goldSession = createSession({
+  tiles: ["#######", "#    E#", "#######"],
+  player: { x: 1, y: 1 },
+  guards: [],
+  gold: [{ x: 2, y: 1 }],
+});
+const initialGoldState = goldSession.state;
+assert.deepEqual(initialGoldState.gold, [{ x: 2, y: 1 }]);
+const collected = goldSession.play(Action.RIGHT);
+assert.deepEqual(collected.state.gold, []);
+assert.strictEqual(goldSession.undo(), initialGoldState);
+assert.deepEqual(goldSession.state.gold, [{ x: 2, y: 1 }]);
+goldSession.play(Action.RIGHT);
+goldSession.restart();
+assert.deepEqual(goldSession.state.gold, [{ x: 2, y: 1 }]);
+assert.equal(goldSession.historyLength, 0);
+
 console.log("Session regression cases passed.");

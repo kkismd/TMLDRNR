@@ -510,4 +510,59 @@ for (const [index, action] of sampleClearActions.entries()) {
   sampleClearState = result.state;
 }
 
+// Gold is acquired after collision and before Goal evaluation.
+const goldStage = {
+  tiles: ["#######", "#    E#", "#######"],
+  player: { x: 1, y: 1 },
+  guards: [],
+  gold: [{ x: 2, y: 1 }],
+};
+let goldState = createSampleState(goldStage);
+assert.deepEqual(goldState.gold, [{ x: 2, y: 1 }]);
+goldStage.gold[0].x = 4;
+assert.deepEqual(goldState.gold, [{ x: 2, y: 1 }]);
+const pickup = step(goldState, Action.RIGHT);
+assert.deepEqual(pickup.state.gold, []);
+assert.equal(pickup.state.status, "playing");
+assert.equal(pickup.guardPhase, true);
+assert.deepEqual(goldState.gold, [{ x: 2, y: 1 }]);
+const rejectedOnGold = step({ ...goldState, player: { x: 1, y: 1 }, gold: [{ x: 1, y: 1 }] }, Action.LEFT);
+assert.equal(rejectedOnGold.kind, "rejected");
+assert.deepEqual(rejectedOnGold.state.gold, [{ x: 1, y: 1 }]);
+
+const goalNeedsGold = createSampleState({
+  tiles: ["#######", "# E   #", "#######"],
+  player: { x: 1, y: 1 },
+  guards: [],
+  gold: [{ x: 3, y: 1 }],
+});
+const inactiveGoal = step(goalNeedsGold, Action.RIGHT);
+assert.equal(inactiveGoal.state.status, "playing");
+assert.equal(inactiveGoal.guardPhase, true);
+assert.equal(inactiveGoal.clear, null);
+const collectLast = step(inactiveGoal.state, Action.RIGHT);
+assert.deepEqual(collectLast.state.gold, []);
+assert.equal(collectLast.state.status, "playing");
+assert.equal(collectLast.guardPhase, true);
+const reachActiveGoal = step(collectLast.state, Action.LEFT);
+assert.equal(reachActiveGoal.state.status, "won");
+assert.equal(reachActiveGoal.guardPhase, false);
+
+const terminalGold = { ...goalNeedsGold, status: "won" };
+const terminalGoldResult = step(terminalGold, Action.WAIT);
+assert.strictEqual(terminalGoldResult.state, terminalGold);
+assert.deepEqual(terminalGoldResult.state.gold, [{ x: 3, y: 1 }]);
+
+const goldCollisionState = createSampleState({
+  tiles: ["#######", "#     #", "#######"],
+  player: { x: 1, y: 1 },
+  guards: [{ x: 3, y: 1 }],
+  gold: [{ x: 2, y: 1 }],
+});
+const guardMovesOntoGold = step(goldCollisionState, Action.WAIT);
+assert.deepEqual(guardMovesOntoGold.state.guards[0], { x: 2, y: 1 });
+const collisionBeforePickup = step(guardMovesOntoGold.state, Action.RIGHT);
+assert.equal(collisionBeforePickup.state.status, "lost");
+assert.deepEqual(collisionBeforePickup.state.gold, [{ x: 2, y: 1 }]);
+
 console.log("World turn regression cases passed.");

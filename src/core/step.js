@@ -83,11 +83,18 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     };
   }
 
-  if (tileAt(playerResult.state, playerResult.state.player.x,
-    playerResult.state.player.y) === "E") {
+  const playerState = playerResult.state;
+  const objectiveState = playerState.gold.some(({ x, y }) =>
+    x === playerState.player.x && y === playerState.player.y)
+    ? { ...playerState, gold: playerState.gold.filter(({ x, y }) =>
+      x !== playerState.player.x || y !== playerState.player.y) }
+    : playerState;
+
+  if (tileAt(objectiveState, objectiveState.player.x,
+    objectiveState.player.y) === "E" && objectiveState.gold.length === 0) {
     return {
       ...playerResult,
-      state: { ...playerResult.state, status: "won" },
+      state: { ...objectiveState, status: "won" },
       guardPhase: false,
       guardResults: [],
       guardOutcome: null,
@@ -103,7 +110,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     guardCount,
     cadence,
   );
-  let currentState = playerResult.state;
+  let currentState = objectiveState;
   const guardResults = [];
   let defeatMetadata = null;
 
