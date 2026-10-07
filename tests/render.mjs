@@ -26,8 +26,17 @@ const stage = {
 };
 renderBoard(board, createSampleState(stage));
 assert.ok(board.children.some(({ className, textContent }) =>
-  className === "tile tile--gold" && textContent === "●"));
+  className.includes("tile--gold") && textContent === "●"));
 assert.ok(board.children.some(({ className }) => className.includes("tile--goal-inactive")));
+
+const guardOnGoldState = createSampleState({
+  ...stage,
+  guards: [{ x: 3, y: 1 }],
+});
+renderBoard(board, guardOnGoldState);
+const guardOnGold = board.children.find(({ className }) => className.includes("tile--guard"));
+assert.ok(guardOnGold.className.includes("tile--has-gold"));
+assert.equal(guardOnGold.textContent, "◆");
 
 const activeState = createSampleState({ ...stage, gold: [] });
 renderBoard(board, activeState);

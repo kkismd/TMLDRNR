@@ -24,7 +24,7 @@ export function renderBoard(element, state) {
         [kind, symbol] = ["gold", "●"];
       }
 
-      cell.className = `tile tile--${kind}${goal ?
+      cell.className = `tile tile--${kind}${hasGold ? " tile--has-gold" : ""}${goal ?
         (state.gold.length === 0 ? " tile--goal-active" : " tile--goal-inactive") : ""}`;
       cell.textContent = symbol;
       cells.append(cell);
