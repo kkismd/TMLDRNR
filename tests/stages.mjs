@@ -4,6 +4,7 @@ import { createSampleState } from "../src/core/state.js";
 import { step } from "../src/core/step.js";
 import {
   leftTieQuirkStage,
+  goldOutAndBackStage,
   gatekeeperWaitStage,
   lureFirstStage,
   sameRowChaseStage,
@@ -124,6 +125,7 @@ const validationStages = [
   waitSyncStage,
   leftTieQuirkStage,
   gatekeeperWaitStage,
+  goldOutAndBackStage,
 ];
 assert.deepEqual(validationStages.map(({ id }) => id), [
   "same-row-chase",
@@ -132,6 +134,7 @@ assert.deepEqual(validationStages.map(({ id }) => id), [
   "wait-sync",
   "left-tie-quirk",
   "gatekeeper-wait",
+  "gold-out-and-back",
 ]);
 assert.deepEqual(stages.map(({ id }) => id), [
   "same-row-chase",
@@ -140,6 +143,7 @@ assert.deepEqual(stages.map(({ id }) => id), [
   "wait-sync",
   "left-tie-quirk",
   "gatekeeper-wait",
+  "gold-out-and-back",
   "selector-smoke",
 ]);
 const expectedSolutions = new Map([
@@ -172,6 +176,13 @@ const expectedSolutions = new Map([
     Action.DOWN, Action.DOWN, Action.DOWN,
     Action.RIGHT, Action.RIGHT,
   ]],
+  [goldOutAndBackStage.id, [
+    Action.LEFT, Action.LEFT, Action.RIGHT,
+    Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.UP, Action.LEFT, Action.LEFT,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
+  ]],
 ]);
 
 const expectedInitialStates = new Map([
@@ -181,6 +192,7 @@ const expectedInitialStates = new Map([
   ["wait-sync", { player: { x: 9, y: 1 }, guards: [{ x: 8, y: 2 }] }],
   ["left-tie-quirk", { player: { x: 8, y: 7 }, guards: [{ x: 6, y: 2 }] }],
   ["gatekeeper-wait", { player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }] }],
+  ["gold-out-and-back", { player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }] }],
 ]);
 const solutionResults = new Map();
 for (const stage of validationStages) {
@@ -205,6 +217,36 @@ for (const stage of validationStages) {
   }
   solutionResults.set(stage.id, results);
 }
+
+assert.equal(goldOutAndBackStage.tiles.length, 9);
+assert.ok(goldOutAndBackStage.tiles.every((row) => row.length === 13));
+assert.deepEqual(goldOutAndBackStage.gold, [{ x: 5, y: 2 }]);
+assert.equal(goldOutAndBackStage.knownSolution.length, 16);
+const goldResults = solutionResults.get(goldOutAndBackStage.id);
+const expectedGoldStates = new Map([
+  [3, { player: { x: 3, y: 5 }, guard: { x: 4, y: 5 } }],
+  [6, { player: { x: 3, y: 2 }, guard: { x: 3, y: 3 } }],
+  [8, { player: { x: 5, y: 2 }, guard: { x: 4, y: 2 }, gold: [] }],
+  [10, { player: { x: 6, y: 1 }, guard: { x: 6, y: 2 } }],
+  [12, { player: { x: 5, y: 2 }, guard: { x: 6, y: 2 } }],
+  [16, { player: { x: 1, y: 2 }, guard: { x: 3, y: 2 }, status: "won" }],
+]);
+for (const [turn, expected] of expectedGoldStates) {
+  const state = goldResults[turn - 1].state;
+  assert.deepEqual({
+    player: state.player,
+    guard: state.guards[0],
+    ...(turn === 8 ? { gold: state.gold } : {}),
+    ...(turn === 16 ? { status: state.status } : {}),
+  }, expected, `gold-out-and-back: unexpected state at turn ${turn}`);
+}
+assert.equal(goldResults[11].kind, "forced");
+assert.ok(goldResults.every(({ kind }) => kind !== "rejected" && kind !== "terminal"));
+
+const goldDirectResults = replay(goldOutAndBackStage,
+  goldOutAndBackStage.knownSolution.slice(0, 8).concat(Action.LEFT));
+assert.equal(goldDirectResults.length, 9);
+assert.equal(goldDirectResults.at(-1).state.status, "lost");
 
 const sameRowResults = solutionResults.get(sameRowChaseStage.id);
 assert.equal(sameRowResults[0].guardDecision.direction, "left");
