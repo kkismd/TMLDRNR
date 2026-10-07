@@ -52,6 +52,10 @@ header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
 .tile--ladder { color: #ffcb70; }
 .tile--rope { color: #7ed0d0; }
 .tile--goal { color: #f8dd75; }
+.tile--goal-inactive { color: #a9873c; opacity: .7; }
+.tile--goal-active { color: #fff19a; text-shadow: 0 0 .5rem #f8dd75; }
+.tile--gold { color: #f8dd75; text-shadow: 0 0 .35rem #f8dd75; }
+.tile--has-gold { background-image: radial-gradient(circle at 82% 18%, #f8dd75 0 .16em, transparent .18em); }
 .tile--player { color: #75ddff; }
 .tile--guard { color: #ff8c87; }
 

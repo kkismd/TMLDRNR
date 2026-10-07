@@ -5,6 +5,7 @@ export function createSampleState(stage) {
     tiles: stage.tiles.map((row) => [...row]),
     player: { ...stage.player },
     guards: stage.guards.map((guard) => ({ ...guard })),
+    gold: stage.gold ? stage.gold.map((position) => ({ ...position })) : [],
     turn: 0,
     status: "playing",
   };
