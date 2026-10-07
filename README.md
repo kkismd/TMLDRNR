@@ -18,6 +18,8 @@ python3 -m http.server 8000
 
 Core の Player 移動回帰ケースは `node tests/core-step.mjs`、Guard AI 回帰ケースは `node tests/guard-ai.mjs`、world turn 回帰ケースは `node tests/world-turn.mjs` で実行できます。
 
+全ユニット / 回帰テストは、リポジトリのルートで `npm test` を実行してください。
+
 ## 構成
 
 - `index.html` / `style.css`: 静的な画面と最小限の見た目
