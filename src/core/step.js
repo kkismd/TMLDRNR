@@ -28,6 +28,25 @@ export const GuardCadence = Object.freeze({
   BY_GUARD_COUNT: "1:guard-count",
 });
 
+export const HOLE_LIFETIME_TURNS = 6;
+
+function advanceHoles(state) {
+  const current = state.holes ?? [];
+  const holes = [];
+  let restoringPlayer = false;
+  for (const hole of current) {
+    if (hole.remaining <= 1) {
+      if (state.player.x === hole.x && state.player.y === hole.y) restoringPlayer = true;
+    } else {
+      holes.push({ ...hole, remaining: hole.remaining - 1 });
+    }
+  }
+  return {
+    state: current.length === 0 ? state : { ...state, holes },
+    restoringPlayer,
+  };
+}
+
 function guardActsOnTurn(turn, guardCount, cadence) {
   switch (cadence) {
     case GuardCadence.EVERY_TURN:
@@ -104,13 +123,26 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     };
   }
 
-  const guardCount = playerResult.state.guards.length;
+  const advancedHoles = advanceHoles(objectiveState);
+  if (advancedHoles.restoringPlayer) {
+    return {
+      ...playerResult,
+      ...defeat(advancedHoles.state, "hole-restoration", null),
+      guardPhase: false,
+      guardResults: [],
+      guardOutcome: null,
+      guardDecision: null,
+      clear: null,
+    };
+  }
+
+  const guardCount = advancedHoles.state.guards.length;
   const normalMovementActive = guardCount > 0 && guardActsOnTurn(
-    playerResult.state.turn,
+    advancedHoles.state.turn,
     guardCount,
     cadence,
   );
-  let currentState = objectiveState;
+  let currentState = advancedHoles.state;
   const guardResults = [];
   let defeatMetadata = null;
 
@@ -157,7 +189,10 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
   }
 
   const result = {
-    state: currentState,
+    state: playerResult.pendingDig && currentState.status === "playing"
+      ? { ...currentState, holes: [...(currentState.holes ?? []),
+        { ...playerResult.pendingDig, remaining: HOLE_LIFETIME_TURNS }] }
+      : currentState,
     kind: playerResult.kind,
     guardPhase: true,
     guardResults,

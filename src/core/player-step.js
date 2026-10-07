@@ -1,5 +1,5 @@
 import { Action } from "./actions.js";
-import { tileAt, isSupported, isTraversable } from "./terrain.js";
+import { baseTileAt, tileAt, isSupported, isTraversable } from "./terrain.js";
 
 const ladderTile = "H";
 const ropeTile = "-";
@@ -61,6 +61,18 @@ export function stepPlayer(state, action) {
     }
     case Action.WAIT:
       return accepted(state);
+    case Action.DIG_LEFT:
+    case Action.DIG_RIGHT: {
+      const direction = action === Action.DIG_LEFT ? -1 : 1;
+      const target = { x: x + direction, y: y + 1 };
+      const sideX = x + direction;
+      const valid = baseTileAt(state, target.x, target.y) === "#" &&
+        isTraversable(state, sideX, y) &&
+        !(state.holes ?? []).some((hole) => hole.x === target.x && hole.y === target.y);
+      if (!valid) return rejected(state);
+      const result = accepted(state);
+      return { ...result, pendingDig: target };
+    }
     default:
       return rejected(state);
   }

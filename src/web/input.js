@@ -14,6 +14,8 @@ const buttonActions = {
   up: Action.UP,
   down: Action.DOWN,
   wait: Action.WAIT,
+  "dig-left": Action.DIG_LEFT,
+  "dig-right": Action.DIG_RIGHT,
 };
 
 export function bindInput(controls, onAction, onContinue = onAction, onCommand = () => {}) {

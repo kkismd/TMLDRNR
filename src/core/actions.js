@@ -4,4 +4,6 @@ export const Action = Object.freeze({
   UP: "up",
   DOWN: "down",
   WAIT: "wait",
+  DIG_LEFT: "dig-left",
+  DIG_RIGHT: "dig-right",
 });
