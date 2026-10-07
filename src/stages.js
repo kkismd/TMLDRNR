@@ -167,6 +167,33 @@ export const gatekeeperWaitStage = {
   ],
 };
 
+export const goldOutAndBackStage = {
+  id: "gold-out-and-back",
+  title: "反転する目標",
+  theme: "Gold取得後にGuardを右へ再誘導してから左のGoalへ戻る",
+  tiles: [
+    "#############",
+    "#           #",
+    "#E H  H  H  #",
+    "###H##H##H###",
+    "###H##H##H###",
+    "#  H  H  H  #",
+    "#############",
+    "#############",
+    "#############",
+  ],
+  player: { x: 4, y: 5 },
+  guards: [{ x: 7, y: 5 }],
+  gold: [{ x: 5, y: 2 }],
+  knownSolution: [
+    Action.LEFT, Action.LEFT, Action.RIGHT,
+    Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.UP, Action.LEFT, Action.LEFT,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
+  ],
+};
+
 export const stages = [
   sameRowChaseStage,
   sampleStage,
@@ -174,5 +201,6 @@ export const stages = [
   waitSyncStage,
   leftTieQuirkStage,
   gatekeeperWaitStage,
+  goldOutAndBackStage,
   selectorSmokeStage,
 ];
