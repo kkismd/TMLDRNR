@@ -194,6 +194,30 @@ export const goldOutAndBackStage = {
   ],
 };
 
+export const lureIntoHoleStage = {
+  id: "lure-into-hole",
+  title: "進路の先に",
+  theme: "Guardの追跡を読み、穴へ誘導して頭上を渡る",
+  tiles: [
+    "#############",
+    "#############",
+    "#############",
+    "#############",
+    "#############",
+    "###      E###",
+    "#############",
+    "#############",
+    "#############",
+  ],
+  player: { x: 4, y: 5 },
+  guards: [{ x: 8, y: 5 }],
+  knownSolution: [
+    Action.DIG_RIGHT,
+    Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+  ],
+};
+
 export const stages = [
   sameRowChaseStage,
   sampleStage,
@@ -202,5 +226,6 @@ export const stages = [
   leftTieQuirkStage,
   gatekeeperWaitStage,
   goldOutAndBackStage,
+  lureIntoHoleStage,
   selectorSmokeStage,
 ];
