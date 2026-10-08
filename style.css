@@ -60,6 +60,8 @@ header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
 .tile--has-gold { background-image: radial-gradient(circle at 82% 18%, #f8dd75 0 .16em, transparent .18em); }
 .tile--player { color: #75ddff; }
 .tile--guard { color: #ff8c87; }
+.tile--guard-trapped { color: #ff8c87; text-shadow: 0 0 .35rem #ff8c87; }
+.tile--guard-climbing { color: #ffcb70; text-shadow: 0 0 .35rem #ffcb70; }
 
 .controls {
   display: grid;

@@ -1,6 +1,6 @@
 import { decideGuardMove, stepGuard } from "./guard-ai.js";
 import { stepPlayer } from "./player-step.js";
-import { isSupported, tileAt } from "./terrain.js";
+import { isSupported, isTraversable, tileAt } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
 
@@ -29,12 +29,41 @@ export const GuardCadence = Object.freeze({
 });
 
 export const HOLE_LIFETIME_TURNS = 6;
+export const GUARD_TRAP_TURNS = 3;
 
 function advanceHoles(state) {
   const current = state.holes ?? [];
   const holes = [];
   let restoringPlayer = false;
+  const escapedGuards = new Set();
+  let currentState = state;
+  let escapedCollision = null;
   for (const hole of current) {
+    if (hole.trap) {
+      const { guardIndex, phase, remaining } = hole.trap;
+      if (phase === "trapped" && remaining > 1) {
+        holes.push({ ...hole, trap: { ...hole.trap, remaining: remaining - 1 } });
+      } else if (phase === "trapped") {
+        holes.push({ ...hole, trap: { guardIndex, phase: "climbing" } });
+      } else {
+        const destination = { x: hole.x, y: hole.y - 1 };
+        const blockedByGuard = currentState.guards.some((guard, index) =>
+          index !== guardIndex && guard.x === destination.x && guard.y === destination.y);
+        if (!blockedByGuard && isTraversable(currentState, destination.x, destination.y)) {
+          const guards = currentState.guards.map((guard, index) => index === guardIndex
+            ? destination : guard);
+          currentState = { ...currentState, guards };
+          escapedGuards.add(guardIndex);
+          if (currentState.player.x === destination.x && currentState.player.y === destination.y) {
+            currentState = { ...currentState, status: "lost" };
+            escapedCollision = { phase: "guard", guardIndex };
+          }
+        } else {
+          holes.push(hole);
+        }
+      }
+      continue;
+    }
     if (hole.remaining <= 1) {
       if (state.player.x === hole.x && state.player.y === hole.y) restoringPlayer = true;
     } else {
@@ -42,8 +71,10 @@ function advanceHoles(state) {
     }
   }
   return {
-    state: current.length === 0 ? state : { ...state, holes },
+    state: current.length === 0 ? state : { ...currentState, holes },
     restoringPlayer,
+    escapedGuards,
+    escapedCollision,
   };
 }
 
@@ -124,6 +155,18 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
   }
 
   const advancedHoles = advanceHoles(objectiveState);
+  if (advancedHoles.state.status === "lost") {
+    return {
+      ...playerResult,
+      state: advancedHoles.state,
+      defeat: advancedHoles.escapedCollision,
+      guardPhase: false,
+      guardResults: [],
+      guardOutcome: null,
+      guardDecision: null,
+      clear: null,
+    };
+  }
   if (advancedHoles.restoringPlayer) {
     return {
       ...playerResult,
@@ -148,6 +191,14 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
 
   for (let guardIndex = 0; guardIndex < guardCount; guardIndex += 1) {
     const guard = currentState.guards[guardIndex];
+    if (advancedHoles.escapedGuards.has(guardIndex)) {
+      guardResults.push({ guardIndex, outcome: "escape", decision: null });
+      continue;
+    }
+    if ((currentState.holes ?? []).some((hole) => hole.trap?.guardIndex === guardIndex)) {
+      guardResults.push({ guardIndex, outcome: "trapped", decision: null });
+      continue;
+    }
     const supported = isSupported(currentState, guard);
     if (supported && !normalMovementActive) {
       guardResults.push({ guardIndex, outcome: "skip", decision: null });
@@ -172,8 +223,19 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
       continue;
     }
 
+    const fallingIntoHole = decision.kind === "forced" && decision.direction === "down" &&
+      (currentState.holes ?? []).some((hole) =>
+        !hole.trap && hole.x === target.x && hole.y === target.y);
     const guardResult = stepGuard(currentState, guardIndex);
     currentState = guardResult.state;
+    if (fallingIntoHole) {
+      currentState = {
+        ...currentState,
+        holes: currentState.holes.map((hole) => hole.x === target.x && hole.y === target.y
+          ? { x: hole.x, y: hole.y, trap: { guardIndex, phase: "trapped", remaining: GUARD_TRAP_TURNS } }
+          : hole),
+      };
+    }
     guardResults.push({
       guardIndex,
       outcome: decision.kind === "forced" ? "forced" : "move",
