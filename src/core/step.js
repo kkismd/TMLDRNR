@@ -229,6 +229,47 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
         !hole.trap && hole.x === target.x && hole.y === target.y);
     const guardResult = stepGuard(currentState, guardIndex);
     currentState = guardResult.state;
+    const movedGuard = currentState.guards[guardIndex];
+    const collidedAtNormalDestination = movedGuard.x === currentState.player.x &&
+      movedGuard.y === currentState.player.y;
+    const horizontalNormalMove = decision.kind !== "forced" &&
+      (decision.direction === "left" || decision.direction === "right");
+    if (horizontalNormalMove && collidedAtNormalDestination) {
+      const lost = defeat(currentState, "guard", guardIndex);
+      currentState = lost.state;
+      defeatMetadata = lost.defeat;
+      guardResults.push({
+        guardIndex,
+        outcome: decision.kind === "forced" ? "forced" : "move",
+        decision: guardResult.decision,
+      });
+      break;
+    }
+
+    const attachedGravity = horizontalNormalMove && !isSupported(currentState, movedGuard);
+    if (attachedGravity) {
+      const fallTarget = { x: movedGuard.x, y: movedGuard.y + 1 };
+      if (!isGuardOccupied(currentState, fallTarget.x, fallTarget.y, guardIndex)) {
+        const fallingIntoHole = (currentState.holes ?? []).some((hole) =>
+          !hole.trap && hole.x === fallTarget.x && hole.y === fallTarget.y);
+        const guards = currentState.guards.map((currentGuard, index) => index === guardIndex
+          ? fallTarget : currentGuard);
+        currentState = { ...currentState, guards };
+        if (fallingIntoHole) {
+          currentState = {
+            ...currentState,
+            holes: currentState.holes.map((hole) =>
+              hole.x === fallTarget.x && hole.y === fallTarget.y
+                ? { x: hole.x, y: hole.y, trap: {
+                  guardIndex,
+                  phase: "trapped",
+                  remaining: GUARD_TRAP_TURNS,
+                } }
+                : hole),
+          };
+        }
+      }
+    }
     if (fallingIntoHole) {
       currentState = {
         ...currentState,

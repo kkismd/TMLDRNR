@@ -213,7 +213,7 @@ export const lureIntoHoleStage = {
   guards: [{ x: 8, y: 5 }],
   knownSolution: [
     Action.DIG_RIGHT,
-    Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.WAIT, Action.WAIT,
     Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
   ],
 };
