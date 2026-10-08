@@ -1,4 +1,4 @@
-import { isSupported } from "./core/step.js";
+import { isPlayerSupported } from "./core/step.js";
 import { Action } from "./core/actions.js";
 import { stages } from "./stages.js";
 import { bindInput } from "./web/input.js";
@@ -27,7 +27,7 @@ function render() {
   const state = session.state;
   renderBoard(board, state);
   turnOutput.value = String(state.turn);
-  const supported = isSupported(state);
+  const supported = isPlayerSupported(state);
   statusOutput.value = state.status === "lost" ? "LOST" :
     state.status === "won" ? "CLEAR" :
     supported ? "READY" : "FALL — 次の落下を進めてください";
@@ -59,7 +59,7 @@ stageSelect.addEventListener("change", () => {
 bindInput(document.querySelector(".controls"), (action) => {
   showResult(action, session.play(action));
 }, () => {
-  if (session.state.status !== "playing" || isSupported(session.state)) return;
+  if (session.state.status !== "playing" || isPlayerSupported(session.state)) return;
   showResult("continue", session.play(Action.WAIT));
 }, (command) => {
   if (command === "undo") {
