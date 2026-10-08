@@ -113,6 +113,21 @@ const fallingGuard = game(["#########", "#       #", "###   ###", "#########"],
 check(fallingGuard, Action.WAIT, "accepted", { x: 2, y: 1 },
   { x: 4, y: 2 }, "down", "forced");
 
+// Planning follows the base floor across a hole; the next update falls into the overlay.
+const guardLuredAcrossHole = {
+  ...game(["#########", "#       #", "#########", "#########"],
+    { x: 6, y: 1 }, { x: 2, y: 1 }),
+  holes: [{ x: 3, y: 2, remaining: 5 }],
+};
+const ontoHole = step(guardLuredAcrossHole, Action.WAIT);
+assert.deepEqual(ontoHole.state.guards[0], { x: 3, y: 1 });
+assert.equal(ontoHole.guardDecision.kind, "chase");
+const intoHole = step(ontoHole.state, Action.WAIT);
+assert.deepEqual(intoHole.guardDecision, { direction: "down", kind: "forced" });
+assert.deepEqual(intoHole.state.guards[0], { x: 3, y: 2 });
+assert.deepEqual(intoHole.state.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 3 });
+
 const longGuardFall = game(["#########", "#       #", "###   ###", "###   ###", "#########"],
   { x: 2, y: 1 }, { x: 4, y: 1 });
 const guardFallOne = check({ ...longGuardFall, turn: 1 }, Action.WAIT, "accepted",

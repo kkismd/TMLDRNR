@@ -24,6 +24,23 @@ assert.equal(isTraversable(rightHole, 3, 2), true);
 assert.equal(isSupported(rightHole, { x: 3, y: 1 }), false);
 assert.equal(rightHole.tiles[2][3], "#");
 
+// Dig completes after this Guard phase; the next update falls through the completed hole.
+const digAheadOfGuard = createSampleState({
+  tiles: ["#######", "#     #", "#######", "#######"],
+  player: { x: 1, y: 1 }, guards: [{ x: 3, y: 1 }],
+});
+const digCommit = step(digAheadOfGuard, Action.DIG_RIGHT);
+assert.equal(digCommit.state.status, "playing");
+assert.deepEqual(digCommit.guardDecision, { direction: "left", kind: "chase" });
+assert.deepEqual(digCommit.state.guards[0], { x: 2, y: 1 });
+assert.deepEqual(digCommit.state.holes,
+  [{ x: 2, y: 2, remaining: HOLE_LIFETIME_TURNS }]);
+const nextGuardUpdate = step(digCommit.state, Action.WAIT);
+assert.deepEqual(nextGuardUpdate.guardDecision, { direction: "down", kind: "forced" });
+assert.deepEqual(nextGuardUpdate.state.guards[0], { x: 2, y: 2 });
+assert.deepEqual(nextGuardUpdate.state.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 3 });
+
 const adjacentGuard = createSampleState({
   tiles, player: { x: 2, y: 1 }, guards: [{ x: 3, y: 1 }],
 });

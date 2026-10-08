@@ -1,4 +1,15 @@
-import { isSupported, isTraversable, tileAt } from "./terrain.js";
+import { baseTileAt, isSupported, isTraversable } from "./terrain.js";
+
+function isBaseTraversable(state, x, y) {
+  const tile = baseTileAt(state, x, y);
+  return tile !== undefined && tile !== "#";
+}
+
+function isBaseSupported(state, position) {
+  const tile = baseTileAt(state, position.x, position.y);
+  const below = baseTileAt(state, position.x, position.y + 1);
+  return tile === "H" || tile === "-" || below === "#" || below === "H";
+}
 
 function directChaseDirection(state, guard) {
   const player = state.player;
@@ -6,7 +17,8 @@ function directChaseDirection(state, guard) {
 
   const direction = Math.sign(player.x - guard.x);
   for (let x = guard.x + direction; x !== player.x + direction; x += direction) {
-    if (!isTraversable(state, x, guard.y) || !isSupported(state, { x, y: guard.y })) {
+    if (!isBaseTraversable(state, x, guard.y) ||
+        !isBaseSupported(state, { x, y: guard.y })) {
       return undefined;
     }
   }
@@ -15,24 +27,24 @@ function directChaseDirection(state, guard) {
 
 function reachLimit(state, guard, direction) {
   let limit = guard.x;
-  for (let x = guard.x + direction; isTraversable(state, x, guard.y); x += direction) {
+  for (let x = guard.x + direction; isBaseTraversable(state, x, guard.y); x += direction) {
     limit = x;
-    if (!isSupported(state, { x, y: guard.y })) break; // Fall point is the boundary.
+    if (!isBaseSupported(state, { x, y: guard.y })) break; // Fall point is the boundary.
   }
   return limit;
 }
 
 function upRow(state, x, y) {
-  if (tileAt(state, x, y) !== "H") return undefined;
+  if (baseTileAt(state, x, y) !== "H") return undefined;
   let row = y;
-  while (row > 0 && tileAt(state, x, row - 1) === "H") row--;
-  if (row > 0 && isTraversable(state, x, row - 1)) row--;
+  while (row > 0 && baseTileAt(state, x, row - 1) === "H") row--;
+  if (row > 0 && isBaseTraversable(state, x, row - 1)) row--;
   return row < y ? row : undefined;
 }
 
 function downRow(state, x, y) {
-  for (let row = y + 1; isTraversable(state, x, row); row++) {
-    if (isSupported(state, { x, y: row })) return row;
+  for (let row = y + 1; isBaseTraversable(state, x, row); row++) {
+    if (isBaseSupported(state, { x, y: row })) return row;
   }
   return undefined;
 }
