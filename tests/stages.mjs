@@ -6,6 +6,7 @@ import {
   leftTieQuirkStage,
   goldOutAndBackStage,
   gatekeeperWaitStage,
+  lureIntoHoleStage,
   lureFirstStage,
   sameRowChaseStage,
   selectorSmokeStage,
@@ -126,6 +127,7 @@ const validationStages = [
   leftTieQuirkStage,
   gatekeeperWaitStage,
   goldOutAndBackStage,
+  lureIntoHoleStage,
 ];
 assert.deepEqual(validationStages.map(({ id }) => id), [
   "same-row-chase",
@@ -135,6 +137,7 @@ assert.deepEqual(validationStages.map(({ id }) => id), [
   "left-tie-quirk",
   "gatekeeper-wait",
   "gold-out-and-back",
+  "lure-into-hole",
 ]);
 assert.deepEqual(stages.map(({ id }) => id), [
   "same-row-chase",
@@ -144,6 +147,7 @@ assert.deepEqual(stages.map(({ id }) => id), [
   "left-tie-quirk",
   "gatekeeper-wait",
   "gold-out-and-back",
+  "lure-into-hole",
   "selector-smoke",
 ]);
 const expectedSolutions = new Map([
@@ -183,6 +187,11 @@ const expectedSolutions = new Map([
     Action.UP, Action.LEFT, Action.LEFT,
     Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
   ]],
+  [lureIntoHoleStage.id, [
+    Action.DIG_RIGHT,
+    Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+  ]],
 ]);
 
 const expectedInitialStates = new Map([
@@ -193,6 +202,7 @@ const expectedInitialStates = new Map([
   ["left-tie-quirk", { player: { x: 8, y: 7 }, guards: [{ x: 6, y: 2 }] }],
   ["gatekeeper-wait", { player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }] }],
   ["gold-out-and-back", { player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }] }],
+  ["lure-into-hole", { player: { x: 4, y: 5 }, guards: [{ x: 8, y: 5 }] }],
 ]);
 const solutionResults = new Map();
 for (const stage of validationStages) {
@@ -242,6 +252,44 @@ for (const [turn, expected] of expectedGoldStates) {
 }
 assert.equal(goldResults[11].kind, "forced");
 assert.ok(goldResults.every(({ kind }) => kind !== "rejected" && kind !== "terminal"));
+
+assert.equal(lureIntoHoleStage.knownSolution.length, 9);
+assert.deepEqual(lureIntoHoleStage.gold ?? [], []);
+assert.equal(lureIntoHoleStage.tiles[5], "###      E###");
+assert.equal(9 - 3 + 1, 7); // Horizontal encounter segment x=3..9.
+assert.equal(lureIntoHoleStage.guards[0].x - lureIntoHoleStage.player.x, 4);
+assert.equal(step(createSampleState(lureIntoHoleStage), Action.DIG_RIGHT).kind, "accepted");
+assert.equal(step(createSampleState(lureIntoHoleStage), Action.DIG_LEFT).kind, "accepted");
+const lureIntoHoleResults = solutionResults.get(lureIntoHoleStage.id);
+assert.deepEqual(lureIntoHoleResults[0].state.player, { x: 4, y: 5 });
+assert.deepEqual(lureIntoHoleResults[0].state.guards[0], { x: 7, y: 5 });
+assert.deepEqual(lureIntoHoleResults[0].state.holes, [{ x: 5, y: 6, remaining: 6 }]);
+assert.deepEqual(lureIntoHoleResults[1].state.guards[0], { x: 6, y: 5 });
+assert.deepEqual(lureIntoHoleResults[2].state.guards[0], { x: 5, y: 5 });
+assert.deepEqual(lureIntoHoleResults[3].state.guards[0], { x: 5, y: 6 });
+assert.deepEqual(lureIntoHoleResults[3].state.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 3 });
+assert.deepEqual(lureIntoHoleResults[4].state.player, { x: 5, y: 5 });
+assert.equal(lureIntoHoleResults[4].state.holes[0].trap.remaining, 2);
+assert.deepEqual(lureIntoHoleResults[5].state.player, { x: 6, y: 5 });
+assert.equal(lureIntoHoleResults[5].state.holes[0].trap.remaining, 1);
+assert.deepEqual(lureIntoHoleResults[6].state.player, { x: 7, y: 5 });
+assert.deepEqual(lureIntoHoleResults[6].state.holes[0].trap,
+  { guardIndex: 0, phase: "climbing" });
+assert.deepEqual(lureIntoHoleResults[7].state.player, { x: 8, y: 5 });
+assert.deepEqual(lureIntoHoleResults[7].state.guards[0], { x: 5, y: 5 });
+assert.deepEqual(lureIntoHoleResults[7].state.holes, []);
+assert.deepEqual(lureIntoHoleResults[8].state.player, { x: 9, y: 5 });
+assert.equal(lureIntoHoleResults[8].state.status, "won");
+
+const directLureResults = replay(lureIntoHoleStage, [Action.RIGHT, Action.RIGHT]);
+assert.equal(directLureResults.at(-1).state.status, "lost");
+assert.equal(directLureResults.at(-1).state.turn, 2);
+const wrongSideDig = replay(lureIntoHoleStage, [Action.DIG_LEFT]);
+assert.equal(wrongSideDig[0].kind, "accepted");
+assert.deepEqual(wrongSideDig[0].state.guards[0], { x: 7, y: 5 });
+assert.deepEqual(wrongSideDig[0].state.holes, [{ x: 3, y: 6, remaining: 6 }]);
+assert.equal(wrongSideDig[0].state.holes[0].trap, undefined);
 
 const goldDirectResults = replay(goldOutAndBackStage,
   goldOutAndBackStage.knownSolution.slice(0, 8).concat(Action.LEFT));
