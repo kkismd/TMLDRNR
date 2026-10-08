@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
+import { stepPlayer } from "../src/core/player-step.js";
+import { isSupported } from "../src/core/terrain.js";
 import { GuardCadence, GUARD_TRAP_TURNS, step } from "../src/core/step.js";
 import { createSession } from "../src/web/session.js";
 import { renderBoard } from "../src/web/render.js";
@@ -114,5 +116,63 @@ for (let remaining = 5; remaining >= 1; remaining -= 1) {
   assert.equal(ordinary.holes[0].remaining, remaining);
 }
 assert.deepEqual(step(ordinary, Action.WAIT).state.holes, []);
+
+function playerOverTrap(phase = "trapped") {
+  return {
+    ...createSampleState({ ...stage, guards: [{ x: 3, y: 2 }] }),
+    player: { x: 3, y: 1 },
+    holes: [{ x: 3, y: 2, trap: { guardIndex: 0, phase,
+      ...(phase === "trapped" ? { remaining: 2 } : {}) } }],
+  };
+}
+
+const trappedSupport = playerOverTrap();
+assert.equal(isSupported(trappedSupport), false);
+assert.equal(stepPlayer(trappedSupport, Action.WAIT).kind, "accepted");
+assert.equal(stepPlayer(trappedSupport, Action.LEFT).kind, "accepted");
+assert.deepEqual(step(trappedSupport, Action.LEFT).state.player, { x: 2, y: 1 });
+assert.deepEqual(step(trappedSupport, Action.RIGHT).state.player, { x: 4, y: 1 });
+assert.deepEqual(step(trappedSupport, Action.LEFT),
+  step(structuredClone(trappedSupport), Action.LEFT));
+assert.deepEqual(stepPlayer(playerOverTrap("climbing"), Action.WAIT).state.player,
+  { x: 3, y: 1 });
+
+const climbingExit = step(playerOverTrap("climbing"), Action.LEFT);
+assert.equal(climbingExit.state.status, "playing");
+assert.deepEqual(climbingExit.state.player, { x: 2, y: 1 });
+assert.deepEqual(climbingExit.state.guards[0], { x: 3, y: 1 });
+assert.deepEqual(climbingExit.state.holes, []);
+const climbingCollision = step(playerOverTrap("climbing"), Action.WAIT);
+assert.equal(climbingCollision.state.status, "lost");
+assert.deepEqual(climbingCollision.defeat, { phase: "guard", guardIndex: 0 });
+
+const emptyHoleSupport = {
+  ...createSampleState({ ...stage, guards: [] }),
+  player: { x: 3, y: 1 },
+  holes: [{ x: 3, y: 2, remaining: 3 }],
+};
+assert.equal(stepPlayer(emptyHoleSupport, Action.RIGHT).kind, "forced");
+const ordinaryGuardSupport = {
+  ...createSampleState({ ...stage, guards: [{ x: 3, y: 2 }] }),
+  player: { x: 3, y: 1 },
+  holes: [{ x: 3, y: 2, remaining: 3 }],
+};
+assert.equal(stepPlayer(ordinaryGuardSupport, Action.WAIT).kind, "forced");
+const staleTrapSupport = {
+  ...playerOverTrap(),
+  guards: [{ x: 2, y: 2 }],
+};
+assert.equal(stepPlayer(staleTrapSupport, Action.WAIT).kind, "forced");
+const digOnTrap = {
+  ...playerOverTrap(),
+  tiles: ["#######", "#     #", "# ### #", "#######"],
+};
+assert.equal(stepPlayer(digOnTrap, Action.DIG_LEFT).kind, "accepted");
+
+const playerAboveTrappedGuard = {
+  ...playerOverTrap(),
+  guards: [{ x: 3, y: 2 }, { x: 3, y: 1 }],
+};
+assert.equal(isSupported(playerAboveTrappedGuard, playerAboveTrappedGuard.guards[1]), false);
 
 console.log("Guard trap lifecycle cases passed.");

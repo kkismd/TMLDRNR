@@ -21,12 +21,25 @@ function rejected(state) {
   return { state, kind: "rejected" };
 }
 
+function isPlayerSupported(state) {
+  if (isSupported(state)) return true;
+
+  const { x, y } = state.player;
+  return (state.holes ?? []).some((hole) => {
+    const trap = hole.trap;
+    if (!trap || !["trapped", "climbing"].includes(trap.phase) ||
+        hole.x !== x || hole.y !== y + 1) return false;
+    const guard = state.guards[trap.guardIndex];
+    return guard?.x === hole.x && guard?.y === hole.y;
+  });
+}
+
 // Player phase only; the world-turn entry point remains step().
 export function stepPlayer(state, action) {
   const { x, y } = state.player;
   const below = tileAt(state, x, y + 1);
 
-  if (!isSupported(state)) {
+  if (!isPlayerSupported(state)) {
     if (!isTraversable(state, x, y + 1)) {
       throw new Error("Invalid game state: unsupported player cannot fall into the board below.");
     }
