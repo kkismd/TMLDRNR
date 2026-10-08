@@ -14,6 +14,7 @@ export function renderBoard(element, state) {
       const cell = document.createElement("span");
       let [kind, symbol] = tileAppearance[state.tiles[y][x]];
       const hole = (state.holes ?? []).find((position) => position.x === x && position.y === y);
+      const trap = hole?.trap;
       const holeClass = hole
         ? hole.remaining <= 1 ? " tile--hole tile--hole-warning" : " tile--hole"
         : "";
@@ -25,12 +26,13 @@ export function renderBoard(element, state) {
       if (state.player.x === x && state.player.y === y) {
         [kind, symbol] = ["player", "●"];
       } else if (state.guards.some((guard) => guard.x === x && guard.y === y)) {
-        [kind, symbol] = ["guard", "◆"];
+        [kind, symbol] = [trap?.phase === "climbing" ? "guard-climbing" :
+          trap ? "guard-trapped" : "guard", trap?.phase === "climbing" ? "⇧" : "◆"];
       } else if (hasGold) {
         [kind, symbol] = ["gold", "●"];
       }
 
-      cell.className = `tile tile--${kind}${holeClass}${hasGold ? " tile--has-gold" : ""}${goal ?
+      cell.className = `tile tile--${kind}${trap ? ` tile--trap-${trap.phase}` : ""}${holeClass}${hasGold ? " tile--has-gold" : ""}${goal ?
         (state.gold.length === 0 ? " tile--goal-active" : " tile--goal-inactive") : ""}`;
       cell.textContent = symbol;
       cells.append(cell);
