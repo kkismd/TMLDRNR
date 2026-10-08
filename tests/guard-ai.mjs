@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { decideGuardMove, stepGuard } from "../src/core/guard-ai.js";
+import { isSupported } from "../src/core/terrain.js";
 
 function map(rows) {
   let player;
@@ -42,6 +43,13 @@ check(["#########", "#P  G   #", "###H#####", "#  H    #", "#########"], "left",
 check(["#########", "#P #G   #", "#########"], "stay", "stay");
 check(["#########", "#P  G   #", "##  #####", "#       #", "#########"],
   "left", "candidate", { x: 3, y: 3, connection: "down", score: [2, 2] });
+
+// Active holes do not change route planning, while actual support remains overlay-aware.
+const holeChase = map(["#########", "#  G P  #", "#########"]);
+holeChase.holes = [{ x: 4, y: 2, remaining: 4 }];
+assert.deepEqual(decideGuardMove(holeChase, 0), { direction: "right", kind: "chase" });
+assert.deepEqual(decideGuardMove({ ...holeChase, holes: [] }, 0),
+  decideGuardMove(holeChase, 0));
 
 // Ladder-top support keeps the intervening cell within horizontal reach.
 check(["#########", "#P G    #", "###H#####", "#  H    #", "#########"], "left", "chase");
@@ -105,6 +113,17 @@ const original = map(["#########", "#P      #", "# H     #", "# H G   #", "#####
 assert.deepEqual(decideGuardMove(original, 0), decideGuardMove(structuredClone(original), 0));
 assert.deepEqual(stepGuard(original, 0), stepGuard(structuredClone(original), 0));
 assert.deepEqual(original.guards, [{ x: 4, y: 3 }]);
+
+// A hole overlay cannot alter ladder / fall candidate planning when actual support is unchanged.
+const candidateBaseline = decideGuardMove(original, 0);
+for (let y = 0; y < original.height; y += 1) {
+  for (let x = 0; x < original.width; x += 1) {
+    if (original.tiles[y][x] !== "#") continue;
+    const withHole = { ...original, holes: [{ x, y, remaining: 3 }] };
+    if (!isSupported(withHole, original.guards[0])) continue;
+    assert.deepEqual(decideGuardMove(withHole, 0), candidateBaseline);
+  }
+}
 assert.throws(() => decideGuardMove(original, 1), RangeError);
 const twoGuards = { ...original, guards: [original.guards[0], { x: 7, y: 3 }] };
 assert.deepEqual(stepGuard(twoGuards, 0).state.guards[1], { x: 7, y: 3 });
