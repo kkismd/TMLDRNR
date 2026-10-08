@@ -1,8 +1,9 @@
 import { decideGuardMove, stepGuard } from "./guard-ai.js";
-import { stepPlayer } from "./player-step.js";
+import { isPlayerSupported, stepPlayer } from "./player-step.js";
 import { isSupported, isTraversable, tileAt } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
+export { isPlayerSupported };
 
 function isGuardOccupied(state, x, y, exceptGuardIndex) {
   return state.guards.some((guard, index) =>

@@ -21,7 +21,7 @@ function rejected(state) {
   return { state, kind: "rejected" };
 }
 
-function isPlayerSupported(state) {
+export function isPlayerSupported(state) {
   if (isSupported(state)) return true;
 
   const { x, y } = state.player;
