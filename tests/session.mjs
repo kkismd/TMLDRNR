@@ -54,15 +54,16 @@ assert.strictEqual(session.state, snapshots[0]);
 assert.equal(session.historyLength, 0);
 
 const fallingStage = {
-  tiles: ["#######", "#     #", "#     #", "#######"],
-  player: { x: 2, y: 1 }, guards: [],
+  tiles: ["#######", "#     #", "##  ###", "#######"],
+  player: { x: 1, y: 1 }, guards: [],
 };
 const falling = createSession(fallingStage);
 const beforeFall = falling.state;
 const fall = falling.play(Action.RIGHT);
-assert.equal(fall.kind, "forced");
+assert.equal(fall.kind, "accepted");
 assert.equal(falling.historyLength, 1);
 assert.equal(fall.state.turn, 1);
+assert.deepEqual(fall.state.player, { x: 2, y: 2 });
 assert.strictEqual(falling.undo(), beforeFall);
 assert.equal(falling.state.turn, 0);
 assert.deepEqual(falling.play(Action.RIGHT), fall);
