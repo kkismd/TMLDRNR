@@ -66,6 +66,32 @@ for (const invalid of [
   assert.equal(result.state.turn, invalid.turn);
 }
 
+// Digging a bottom-row brick would create an unsupported hole with no in-board
+// fall destination. Reject either direction before the world turn begins.
+for (const [action, targetX] of [
+  [Action.DIG_LEFT, 1],
+  [Action.DIG_RIGHT, 3],
+]) {
+  const bottomRowState = createSampleState({
+    tiles: ["#######", "#     #", "#     #", "#######"],
+    player: { x: 2, y: 2 },
+    guards: [{ x: 5, y: 2 }],
+  });
+  const withExistingHole = {
+    ...bottomRowState,
+    holes: [{ x: 1, y: 2, remaining: 2 }],
+  };
+  const result = step(withExistingHole, action);
+  assert.equal(result.kind, "rejected");
+  assert.strictEqual(result.state, withExistingHole);
+  assert.equal(result.state.turn, withExistingHole.turn);
+  assert.equal(result.guardPhase, false);
+  assert.deepEqual(result.guardResults, []);
+  assert.deepEqual(result.state.holes, [{ x: 1, y: 2, remaining: 2 }]);
+  assert.equal(result.pendingDig, undefined);
+  assert.equal(result.state.tiles[3][targetX], "#");
+}
+
 const alreadyOpen = { ...rightHole, holes: [{ x: 3, y: 2, remaining: 3 }] };
 assert.equal(step(alreadyOpen, Action.DIG_RIGHT).kind, "rejected");
 assert.equal(step(alreadyOpen, Action.DIG_RIGHT).state.holes[0].remaining, 3);

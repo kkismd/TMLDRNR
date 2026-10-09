@@ -80,6 +80,7 @@ export function stepPlayer(state, action) {
       const target = { x: x + direction, y: y + 1 };
       const sideX = x + direction;
       const valid = baseTileAt(state, target.x, target.y) === "#" &&
+        target.y + 1 < state.tiles.length &&
         isTraversable(state, sideX, y) &&
         !(state.holes ?? []).some((hole) => hole.x === target.x && hole.y === target.y);
       if (!valid) return rejected(state);
