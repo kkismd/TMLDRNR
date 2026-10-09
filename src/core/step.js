@@ -1,26 +1,9 @@
-import { decideGuardMove, stepGuard } from "./guard-ai.js";
+import { decideGuardMove } from "./guard-ai.js";
 import { isPlayerSupported, stepPlayer } from "./player-step.js";
 import { isSupported, isTraversable, tileAt } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
 export { isPlayerSupported };
-
-function isGuardOccupied(state, x, y, exceptGuardIndex) {
-  return state.guards.some((guard, index) =>
-    index !== exceptGuardIndex && guard.x === x && guard.y === y);
-}
-
-function collidedGuardIndex(state) {
-  return state.guards.findIndex((guard) =>
-    guard.x === state.player.x && guard.y === state.player.y);
-}
-
-function defeat(state, phase, guardIndex) {
-  return {
-    state: { ...state, status: "lost" },
-    defeat: { phase, guardIndex },
-  };
-}
 
 export const GuardCadence = Object.freeze({
   EVERY_TURN: "1:1",
@@ -32,14 +15,103 @@ export const GuardCadence = Object.freeze({
 export const HOLE_LIFETIME_TURNS = 6;
 export const GUARD_TRAP_TURNS = 3;
 
+function defeat(state, phase, guardIndex) {
+  return { state: { ...state, status: "lost" }, defeat: { phase, guardIndex } };
+}
+
+function collidedGuardIndex(state) {
+  return state.guards.findIndex(({ x, y }) => x === state.player.x && y === state.player.y);
+}
+
+function isGuardOccupied(state, x, y, exceptGuardIndex) {
+  return state.guards.some((guard, index) =>
+    index !== exceptGuardIndex && guard.x === x && guard.y === y);
+}
+
+function collectGold(state) {
+  const collected = state.gold.some(({ x, y }) => x === state.player.x && y === state.player.y);
+  return collected ? { ...state, gold: state.gold.filter(({ x, y }) =>
+    x !== state.player.x || y !== state.player.y) } : state;
+}
+
+function checkPlayerCell(state, phase) {
+  const guardIndex = collidedGuardIndex(state);
+  if (guardIndex !== -1) return { ...defeat(state, phase, guardIndex), clear: null };
+  const objectiveState = collectGold(state);
+  if (tileAt(objectiveState, objectiveState.player.x, objectiveState.player.y) === "E" &&
+      objectiveState.gold.length === 0) {
+    return { state: { ...objectiveState, status: "won" }, defeat: null, clear: { phase } };
+  }
+  return { state: objectiveState, defeat: null, clear: null };
+}
+
+function settlePlayer(state, phase) {
+  let current = state;
+  while (!isPlayerSupported(current)) {
+    const x = current.player.x;
+    const y = current.player.y + 1;
+    if (!isTraversable(current, x, y)) {
+      throw new Error("Invalid game state: unsupported player cannot fall into the board below.");
+    }
+    current = { ...current, player: { x, y } };
+    const checked = checkPlayerCell(current, phase);
+    current = checked.state;
+    if (checked.defeat || checked.clear) return checked;
+  }
+  return { state: current, defeat: null, clear: null };
+}
+
+function trapGuard(state, guardIndex, x, y) {
+  const hole = (state.holes ?? []).find(({ x: hx, y: hy, trap }) =>
+    !trap && hx === x && hy === y);
+  if (!hole) return state;
+  return {
+    ...state,
+    holes: state.holes.map((candidate) => candidate === hole
+      ? { x, y, trap: { guardIndex, phase: "trapped", remaining: GUARD_TRAP_TURNS } }
+      : candidate),
+  };
+}
+
+function moveGuardTo(state, guardIndex, destination, phase = "guard") {
+  const guards = state.guards.map((guard, index) => index === guardIndex ? destination : guard);
+  let current = { ...state, guards };
+  if (destination.x === current.player.x && destination.y === current.player.y) {
+    return { ...defeat(current, phase, guardIndex), trapped: false };
+  }
+  const trapped = (current.holes ?? []).some(({ x, y, trap }) =>
+    !trap && x === destination.x && y === destination.y);
+  if (trapped) current = trapGuard(current, guardIndex, destination.x, destination.y);
+  return { state: current, defeat: null, trapped };
+}
+
+function settleGuard(state, guardIndex) {
+  let current = state;
+  while (!isSupported(current, current.guards[guardIndex])) {
+    const guard = current.guards[guardIndex];
+    const destination = { x: guard.x, y: guard.y + 1 };
+    if (!isTraversable(current, destination.x, destination.y)) {
+      throw new Error("Invalid game state: unsupported guard cannot fall into the board below.");
+    }
+    if (isGuardOccupied(current, destination.x, destination.y, guardIndex)) {
+      return { state: current, defeat: null, blocked: true, trapped: false };
+    }
+    const result = moveGuardTo(current, guardIndex, destination);
+    if (result.defeat) return { ...result, blocked: false };
+    current = result.state;
+    if (result.trapped) return { state: current, defeat: null, blocked: false, trapped: true };
+  }
+  return { state: current, defeat: null, blocked: false, trapped: false };
+}
+
 function advanceHoles(state) {
-  const current = state.holes ?? [];
-  const holes = [];
-  let restoringPlayer = false;
-  const escapedGuards = new Set();
   let currentState = state;
+  const holes = [];
+  const escapedGuards = new Set();
   let escapedCollision = null;
-  for (const hole of current) {
+  let restoringPlayer = false;
+
+  for (const hole of state.holes ?? []) {
     if (hole.trap) {
       const { guardIndex, phase, remaining } = hole.trap;
       if (phase === "trapped" && remaining > 1) {
@@ -48,17 +120,12 @@ function advanceHoles(state) {
         holes.push({ ...hole, trap: { guardIndex, phase: "climbing" } });
       } else {
         const destination = { x: hole.x, y: hole.y - 1 };
-        const blockedByGuard = currentState.guards.some((guard, index) =>
-          index !== guardIndex && guard.x === destination.x && guard.y === destination.y);
-        if (!blockedByGuard && isTraversable(currentState, destination.x, destination.y)) {
-          const guards = currentState.guards.map((guard, index) => index === guardIndex
-            ? destination : guard);
-          currentState = { ...currentState, guards };
+        const blocked = isGuardOccupied(currentState, destination.x, destination.y, guardIndex);
+        if (!blocked && isTraversable(currentState, destination.x, destination.y)) {
+          const result = moveGuardTo(currentState, guardIndex, destination);
+          currentState = result.state;
           escapedGuards.add(guardIndex);
-          if (currentState.player.x === destination.x && currentState.player.y === destination.y) {
-            currentState = { ...currentState, status: "lost" };
-            escapedCollision = { phase: "guard", guardIndex };
-          }
+          if (result.defeat) escapedCollision = result.defeat;
         } else {
           holes.push(hole);
         }
@@ -71,247 +138,158 @@ function advanceHoles(state) {
       holes.push({ ...hole, remaining: hole.remaining - 1 });
     }
   }
-  return {
-    state: current.length === 0 ? state : { ...currentState, holes },
-    restoringPlayer,
-    escapedGuards,
-    escapedCollision,
-  };
+
+  if ((state.holes ?? []).length > 0) currentState = { ...currentState, holes };
+  return { state: currentState, escapedGuards, escapedCollision, restoringPlayer };
 }
 
 function guardActsOnTurn(turn, guardCount, cadence) {
   switch (cadence) {
-    case GuardCadence.EVERY_TURN:
-      return true;
-    case GuardCadence.TWO_OF_THREE:
-      return turn % 3 !== 0;
-    case GuardCadence.EVERY_OTHER:
-      return turn % 2 === 1;
-    case GuardCadence.BY_GUARD_COUNT:
-      return (turn - 1) % guardCount === 0;
-    default:
-      throw new RangeError(`Invalid Guard cadence: ${cadence}`);
+    case GuardCadence.EVERY_TURN: return true;
+    case GuardCadence.TWO_OF_THREE: return turn % 3 !== 0;
+    case GuardCadence.EVERY_OTHER: return turn % 2 === 1;
+    case GuardCadence.BY_GUARD_COUNT: return (turn - 1) % guardCount === 0;
+    default: throw new RangeError(`Invalid Guard cadence: ${cadence}`);
   }
 }
 
 export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
   if (state.status === "lost" || state.status === "won") {
-    return {
-      state,
-      kind: "terminal",
-      guardPhase: false,
-      guardResults: [],
-      guardOutcome: null,
-      guardDecision: null,
-      defeat: null,
-      clear: null,
-    };
+    return { state, kind: "terminal", guardPhase: false, guardResults: [],
+      guardOutcome: null, guardDecision: null, defeat: null, clear: null };
+  }
+  if (!isPlayerSupported(state)) {
+    throw new Error("Invalid game state: Player input requires a settled, supported position.");
   }
 
   const playerResult = stepPlayer(state, action);
   if (playerResult.kind === "rejected") {
-    return {
-      ...playerResult,
-      guardPhase: false,
-      guardResults: [],
-      guardOutcome: null,
-      guardDecision: null,
-      defeat: null,
-      clear: null,
-    };
+    return { ...playerResult, guardPhase: false, guardResults: [], guardOutcome: null,
+      guardDecision: null, defeat: null, clear: null };
   }
 
-  const playerCollision = collidedGuardIndex(playerResult.state);
-  if (playerCollision !== -1) {
-    return {
-      ...playerResult,
-      ...defeat(playerResult.state, "player", playerCollision),
-      guardPhase: false,
-      guardResults: [],
-      guardOutcome: null,
-      guardDecision: null,
-      clear: null,
-    };
+  let current = playerResult.state;
+  let checked = checkPlayerCell(current, "player");
+  current = checked.state;
+  if (checked.defeat || checked.clear) {
+    return { ...playerResult, ...checked, guardPhase: false, guardResults: [],
+      guardOutcome: null, guardDecision: null };
+  }
+  checked = settlePlayer(current, "player");
+  current = checked.state;
+  if (checked.defeat || checked.clear) {
+    return { ...playerResult, ...checked, guardPhase: false, guardResults: [],
+      guardOutcome: null, guardDecision: null };
   }
 
-  const playerState = playerResult.state;
-  const objectiveState = playerState.gold.some(({ x, y }) =>
-    x === playerState.player.x && y === playerState.player.y)
-    ? { ...playerState, gold: playerState.gold.filter(({ x, y }) =>
-      x !== playerState.player.x || y !== playerState.player.y) }
-    : playerState;
-
-  if (tileAt(objectiveState, objectiveState.player.x,
-    objectiveState.player.y) === "E" && objectiveState.gold.length === 0) {
-    return {
-      ...playerResult,
-      state: { ...objectiveState, status: "won" },
-      guardPhase: false,
-      guardResults: [],
-      guardOutcome: null,
-      guardDecision: null,
-      defeat: null,
-      clear: { phase: "player" },
-    };
+  const advanced = advanceHoles(current);
+  current = advanced.state;
+  if (advanced.escapedCollision) {
+    return { ...playerResult, state: { ...current, status: "lost" },
+      defeat: advanced.escapedCollision, clear: null, guardPhase: false,
+      guardResults: [], guardOutcome: null, guardDecision: null };
+  }
+  if (advanced.restoringPlayer) {
+    const lost = defeat(current, "hole-restoration", null);
+    return { ...playerResult, ...lost, clear: null, guardPhase: false,
+      guardResults: [], guardOutcome: null, guardDecision: null };
   }
 
-  const advancedHoles = advanceHoles(objectiveState);
-  if (advancedHoles.state.status === "lost") {
-    return {
-      ...playerResult,
-      state: advancedHoles.state,
-      defeat: advancedHoles.escapedCollision,
-      guardPhase: false,
-      guardResults: [],
-      guardOutcome: null,
-      guardDecision: null,
-      clear: null,
-    };
-  }
-  if (advancedHoles.restoringPlayer) {
-    return {
-      ...playerResult,
-      ...defeat(advancedHoles.state, "hole-restoration", null),
-      guardPhase: false,
-      guardResults: [],
-      guardOutcome: null,
-      guardDecision: null,
-      clear: null,
-    };
-  }
-
-  const guardCount = advancedHoles.state.guards.length;
-  const normalMovementActive = guardCount > 0 && guardActsOnTurn(
-    advancedHoles.state.turn,
-    guardCount,
-    cadence,
-  );
-  let currentState = advancedHoles.state;
+  const guardCount = current.guards.length;
+  const movementActive = guardCount > 0 && guardActsOnTurn(current.turn, guardCount, cadence);
   const guardResults = [];
   let defeatMetadata = null;
 
   for (let guardIndex = 0; guardIndex < guardCount; guardIndex += 1) {
-    const guard = currentState.guards[guardIndex];
-    if (advancedHoles.escapedGuards.has(guardIndex)) {
+    if (advanced.escapedGuards.has(guardIndex)) {
       guardResults.push({ guardIndex, outcome: "escape", decision: null });
       continue;
     }
-    if ((currentState.holes ?? []).some((hole) => hole.trap?.guardIndex === guardIndex)) {
+    if ((current.holes ?? []).some(({ trap }) => trap?.guardIndex === guardIndex)) {
       guardResults.push({ guardIndex, outcome: "trapped", decision: null });
       continue;
     }
-    const supported = isSupported(currentState, guard);
-    if (supported && !normalMovementActive) {
+
+    let guard = current.guards[guardIndex];
+    let decision = null;
+    if (!isSupported(current, guard)) {
+      const settled = settleGuard(current, guardIndex);
+      current = settled.state;
+      if (settled.defeat) {
+        current = settled.state;
+        defeatMetadata = settled.defeat;
+      }
+      guardResults.push({ guardIndex, outcome: settled.blocked ? "blocked" : "forced",
+        decision: { direction: "down", kind: "forced" } });
+      if (defeatMetadata) break;
+      continue;
+    }
+    if (!movementActive) {
       guardResults.push({ guardIndex, outcome: "skip", decision: null });
       continue;
     }
 
-    const decision = decideGuardMove(currentState, guardIndex);
+    decision = decideGuardMove(current, guardIndex);
     if (decision.direction === "stay") {
       guardResults.push({ guardIndex, outcome: "stay", decision });
       continue;
     }
-
-    const delta = {
-      left: { x: -1, y: 0 },
-      right: { x: 1, y: 0 },
-      up: { x: 0, y: -1 },
-      down: { x: 0, y: 1 },
-    }[decision.direction];
-    const target = { x: guard.x + delta.x, y: guard.y + delta.y };
-    if (isGuardOccupied(currentState, target.x, target.y, guardIndex)) {
+    const delta = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[decision.direction];
+    const destination = { x: guard.x + delta[0], y: guard.y + delta[1] };
+    if (isGuardOccupied(current, destination.x, destination.y, guardIndex)) {
       guardResults.push({ guardIndex, outcome: "blocked", decision });
       continue;
     }
-
-    const fallingIntoHole = decision.kind === "forced" && decision.direction === "down" &&
-      (currentState.holes ?? []).some((hole) =>
-        !hole.trap && hole.x === target.x && hole.y === target.y);
-    const guardResult = stepGuard(currentState, guardIndex);
-    currentState = guardResult.state;
-    const movedGuard = currentState.guards[guardIndex];
-    const collidedAtNormalDestination = movedGuard.x === currentState.player.x &&
-      movedGuard.y === currentState.player.y;
-    const horizontalNormalMove = decision.kind !== "forced" &&
-      (decision.direction === "left" || decision.direction === "right");
-    if (horizontalNormalMove && collidedAtNormalDestination) {
-      const lost = defeat(currentState, "guard", guardIndex);
-      currentState = lost.state;
-      defeatMetadata = lost.defeat;
-      guardResults.push({
-        guardIndex,
-        outcome: decision.kind === "forced" ? "forced" : "move",
-        decision: guardResult.decision,
-      });
+    const moved = moveGuardTo(current, guardIndex, destination);
+    current = moved.state;
+    if (moved.defeat) {
+      defeatMetadata = moved.defeat;
+      guardResults.push({ guardIndex, outcome: "move", decision });
       break;
     }
-
-    const attachedGravity = horizontalNormalMove && !isSupported(currentState, movedGuard);
-    if (attachedGravity) {
-      const fallTarget = { x: movedGuard.x, y: movedGuard.y + 1 };
-      if (isGuardOccupied(currentState, fallTarget.x, fallTarget.y, guardIndex)) {
-        const guards = currentState.guards.map((currentGuard, index) => index === guardIndex
-          ? guard : currentGuard);
-        currentState = { ...currentState, guards };
-        guardResults.push({ guardIndex, outcome: "blocked", decision: guardResult.decision });
-        continue;
-      }
-
-      const attachedFallEntersHole = (currentState.holes ?? []).some((hole) =>
-        !hole.trap && hole.x === fallTarget.x && hole.y === fallTarget.y);
-      const guards = currentState.guards.map((currentGuard, index) => index === guardIndex
-        ? fallTarget : currentGuard);
-      currentState = { ...currentState, guards };
-      if (attachedFallEntersHole) {
-        currentState = {
-          ...currentState,
-          holes: currentState.holes.map((hole) =>
-            hole.x === fallTarget.x && hole.y === fallTarget.y
-              ? { x: hole.x, y: hole.y, trap: {
-                guardIndex,
-                phase: "trapped",
-                remaining: GUARD_TRAP_TURNS,
-              } }
-              : hole),
-        };
+    if (!moved.trapped) {
+      const settled = settleGuard(current, guardIndex);
+      current = settled.state;
+      if (settled.defeat) {
+        current = settled.state;
+        defeatMetadata = settled.defeat;
       }
     }
-    if (fallingIntoHole) {
-      currentState = {
-        ...currentState,
-        holes: currentState.holes.map((hole) => hole.x === target.x && hole.y === target.y
-          ? { x: hole.x, y: hole.y, trap: { guardIndex, phase: "trapped", remaining: GUARD_TRAP_TURNS } }
-          : hole),
-      };
+    guardResults.push({ guardIndex, outcome: decision.kind === "forced" ? "forced" : "move", decision });
+    if (defeatMetadata) break;
+  }
+
+  if (playerResult.pendingDig && current.status === "playing") {
+    current = { ...current, holes: [...(current.holes ?? []),
+      { ...playerResult.pendingDig, remaining: HOLE_LIFETIME_TURNS }] };
+    for (let guardIndex = 0; guardIndex < guardCount; guardIndex += 1) {
+      if ((current.holes ?? []).some(({ trap }) => trap?.guardIndex === guardIndex)) continue;
+      if (!isSupported(current, current.guards[guardIndex])) {
+        const settled = settleGuard(current, guardIndex);
+        current = settled.state;
+        if (settled.defeat) {
+          current = settled.state;
+          defeatMetadata = settled.defeat;
+          break;
+        }
+      }
     }
-    guardResults.push({
-      guardIndex,
-      outcome: decision.kind === "forced" ? "forced" : "move",
-      decision: guardResult.decision,
-    });
-    if (currentState.guards[guardIndex].x === currentState.player.x &&
-        currentState.guards[guardIndex].y === currentState.player.y) {
-      const lost = defeat(currentState, "guard", guardIndex);
-      currentState = lost.state;
-      defeatMetadata = lost.defeat;
-      break;
+    if (current.status === "playing") {
+      const playerSettled = settlePlayer(current, "terrain-change");
+      current = playerSettled.state;
+      defeatMetadata = playerSettled.defeat ?? defeatMetadata;
+      checked = playerSettled;
     }
   }
 
-  const result = {
-    state: playerResult.pendingDig && currentState.status === "playing"
-      ? { ...currentState, holes: [...(currentState.holes ?? []),
-        { ...playerResult.pendingDig, remaining: HOLE_LIFETIME_TURNS }] }
-      : currentState,
-    kind: playerResult.kind,
-    guardPhase: true,
-    guardResults,
-    defeat: defeatMetadata,
-    clear: null,
-  };
+  const result = { ...playerResult, state: current, guardPhase: true, guardResults,
+    defeat: defeatMetadata, clear: checked?.clear ?? null };
   if (guardCount === 1) {
-    result.guardOutcome = guardResults[0].outcome;
-    result.guardDecision = guardResults[0].decision;
+    result.guardOutcome = guardResults[0]?.outcome ?? null;
+    result.guardDecision = guardResults[0]?.decision ?? null;
+  } else {
+    result.guardOutcome = null;
+    result.guardDecision = null;
   }
   return result;
 }

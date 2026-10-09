@@ -8,7 +8,7 @@ import { createSession } from "../src/web/session.js";
 import { renderBoard } from "../src/web/render.js";
 
 const stage = {
-  tiles: ["#######", "#     #", "# ### #", "#######"],
+  tiles: ["#######", "#     #", "##### #", "#######"],
   player: { x: 1, y: 1 },
   guards: [{ x: 3, y: 1 }],
 };
