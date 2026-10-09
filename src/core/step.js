@@ -90,8 +90,10 @@ function settleGuard(state, guardIndex) {
   while (!isSupported(current, current.guards[guardIndex])) {
     const guard = current.guards[guardIndex];
     const destination = { x: guard.x, y: guard.y + 1 };
-    if (!isTraversable(current, destination.x, destination.y) ||
-        isGuardOccupied(current, destination.x, destination.y, guardIndex)) {
+    if (!isTraversable(current, destination.x, destination.y)) {
+      throw new Error("Invalid game state: unsupported guard cannot fall into the board below.");
+    }
+    if (isGuardOccupied(current, destination.x, destination.y, guardIndex)) {
       return { state: current, defeat: null, blocked: true, trapped: false };
     }
     const result = moveGuardTo(current, guardIndex, destination);

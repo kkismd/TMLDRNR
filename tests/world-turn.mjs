@@ -151,6 +151,11 @@ const forcedOnly = step(unsupportedAtStart, Action.WAIT);
 assert.deepEqual(forcedOnly.state.guards[0], { x: 4, y: 3 });
 assert.deepEqual(forcedOnly.guardDecision, { direction: "down", kind: "forced" });
 
+const guardBelowBoard = game(["#####", "#   #", "##  #"],
+  { x: 1, y: 1 }, { x: 2, y: 2 });
+assert.throws(() => step(guardBelowBoard, Action.WAIT),
+  /Invalid game state: unsupported guard cannot fall into the board below/);
+
 // Cadence skips supported movement; it cannot trigger attached gravity.
 const cadenceSkipHole = {
   ...guardLuredAcrossHole,
