@@ -189,7 +189,7 @@ const expectedSolutions = new Map([
   ]],
   [lureIntoHoleStage.id, [
     Action.DIG_RIGHT,
-    Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.WAIT, Action.WAIT,
     Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
   ]],
 ]);
@@ -253,7 +253,7 @@ for (const [turn, expected] of expectedGoldStates) {
 assert.equal(goldResults[11].kind, "forced");
 assert.ok(goldResults.every(({ kind }) => kind !== "rejected" && kind !== "terminal"));
 
-assert.equal(lureIntoHoleStage.knownSolution.length, 9);
+assert.equal(lureIntoHoleStage.knownSolution.length, 8);
 assert.deepEqual(lureIntoHoleStage.gold ?? [], []);
 assert.equal(lureIntoHoleStage.tiles[5], "###      E###");
 assert.equal(9 - 3 + 1, 7); // Horizontal encounter segment x=3..9.
@@ -265,22 +265,21 @@ assert.deepEqual(lureIntoHoleResults[0].state.player, { x: 4, y: 5 });
 assert.deepEqual(lureIntoHoleResults[0].state.guards[0], { x: 7, y: 5 });
 assert.deepEqual(lureIntoHoleResults[0].state.holes, [{ x: 5, y: 6, remaining: 6 }]);
 assert.deepEqual(lureIntoHoleResults[1].state.guards[0], { x: 6, y: 5 });
-assert.deepEqual(lureIntoHoleResults[2].state.guards[0], { x: 5, y: 5 });
-assert.deepEqual(lureIntoHoleResults[3].state.guards[0], { x: 5, y: 6 });
-assert.deepEqual(lureIntoHoleResults[3].state.holes[0].trap,
+assert.deepEqual(lureIntoHoleResults[2].state.guards[0], { x: 5, y: 6 });
+assert.deepEqual(lureIntoHoleResults[2].state.holes[0].trap,
   { guardIndex: 0, phase: "trapped", remaining: 3 });
-assert.deepEqual(lureIntoHoleResults[4].state.player, { x: 5, y: 5 });
-assert.equal(lureIntoHoleResults[4].state.holes[0].trap.remaining, 2);
-assert.deepEqual(lureIntoHoleResults[5].state.player, { x: 6, y: 5 });
-assert.equal(lureIntoHoleResults[5].state.holes[0].trap.remaining, 1);
-assert.deepEqual(lureIntoHoleResults[6].state.player, { x: 7, y: 5 });
-assert.deepEqual(lureIntoHoleResults[6].state.holes[0].trap,
+assert.deepEqual(lureIntoHoleResults[3].state.player, { x: 5, y: 5 });
+assert.equal(lureIntoHoleResults[3].state.holes[0].trap.remaining, 2);
+assert.deepEqual(lureIntoHoleResults[4].state.player, { x: 6, y: 5 });
+assert.equal(lureIntoHoleResults[4].state.holes[0].trap.remaining, 1);
+assert.deepEqual(lureIntoHoleResults[5].state.player, { x: 7, y: 5 });
+assert.deepEqual(lureIntoHoleResults[5].state.holes[0].trap,
   { guardIndex: 0, phase: "climbing" });
-assert.deepEqual(lureIntoHoleResults[7].state.player, { x: 8, y: 5 });
-assert.deepEqual(lureIntoHoleResults[7].state.guards[0], { x: 5, y: 5 });
-assert.deepEqual(lureIntoHoleResults[7].state.holes, []);
-assert.deepEqual(lureIntoHoleResults[8].state.player, { x: 9, y: 5 });
-assert.equal(lureIntoHoleResults[8].state.status, "won");
+assert.deepEqual(lureIntoHoleResults[6].state.player, { x: 8, y: 5 });
+assert.deepEqual(lureIntoHoleResults[6].state.guards[0], { x: 5, y: 5 });
+assert.deepEqual(lureIntoHoleResults[6].state.holes, []);
+assert.deepEqual(lureIntoHoleResults[7].state.player, { x: 9, y: 5 });
+assert.equal(lureIntoHoleResults[7].state.status, "won");
 
 const directLureResults = replay(lureIntoHoleStage, [Action.RIGHT, Action.RIGHT]);
 assert.equal(directLureResults.at(-1).state.status, "lost");
@@ -306,7 +305,7 @@ const lureResults = solutionResults.get(lureFirstStage.id);
 assert.equal(lureFirstStage.knownSolution[0], Action.LEFT);
 assert.deepEqual(lureResults[0].state.guards[0], { x: 3, y: 3 });
 assert.deepEqual(lureResults[1].state.guards[0], { x: 3, y: 4 });
-assert.deepEqual(lureResults[2].state.guards[0], { x: 2, y: 4 });
+assert.deepEqual(lureResults[2].state.guards[0], { x: 2, y: 5 });
 assert.equal(lureResults.at(-1).state.status, "won");
 
 const waitResults = solutionResults.get(waitSyncStage.id);
