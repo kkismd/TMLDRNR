@@ -162,6 +162,22 @@ assert.equal(cadenceSkipped.guardOutcome, "skip");
 assert.deepEqual(cadenceSkipped.state.guards[0], cadenceSkipHole.guards[0]);
 assert.equal(cadenceSkipped.state.holes[0].trap, undefined);
 
+// Attached gravity and its horizontal move are blocked atomically by an occupied fall cell.
+const blockedAttachedGravity = {
+  ...game(["#########", "#       #", "#########", "#########"],
+    { x: 6, y: 1 }, { x: 2, y: 1 }),
+  guards: [{ x: 2, y: 1 }, { x: 3, y: 2 }],
+  holes: [{ x: 3, y: 2, remaining: 5 }],
+};
+const blockedAttachedResult = step(blockedAttachedGravity, Action.WAIT);
+assert.deepEqual(blockedAttachedResult.guardResults.map(({ outcome }) => outcome),
+  ["blocked", "stay"]);
+assert.deepEqual(blockedAttachedResult.state.guards[0], { x: 2, y: 1 });
+assert.deepEqual(blockedAttachedResult.state.guards[1], { x: 3, y: 2 });
+assert.equal(blockedAttachedResult.guardResults[1].decision.direction, "stay");
+assert.deepEqual(step(structuredClone(blockedAttachedGravity), Action.WAIT),
+  blockedAttachedResult);
+
 const longGuardFall = game(["#########", "#       #", "###   ###", "###   ###", "#########"],
   { x: 2, y: 1 }, { x: 4, y: 1 });
 const guardFallOne = check({ ...longGuardFall, turn: 1 }, Action.WAIT, "accepted",

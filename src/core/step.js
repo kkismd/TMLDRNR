@@ -249,25 +249,31 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     const attachedGravity = horizontalNormalMove && !isSupported(currentState, movedGuard);
     if (attachedGravity) {
       const fallTarget = { x: movedGuard.x, y: movedGuard.y + 1 };
-      if (!isGuardOccupied(currentState, fallTarget.x, fallTarget.y, guardIndex)) {
-        const fallingIntoHole = (currentState.holes ?? []).some((hole) =>
-          !hole.trap && hole.x === fallTarget.x && hole.y === fallTarget.y);
+      if (isGuardOccupied(currentState, fallTarget.x, fallTarget.y, guardIndex)) {
         const guards = currentState.guards.map((currentGuard, index) => index === guardIndex
-          ? fallTarget : currentGuard);
+          ? guard : currentGuard);
         currentState = { ...currentState, guards };
-        if (fallingIntoHole) {
-          currentState = {
-            ...currentState,
-            holes: currentState.holes.map((hole) =>
-              hole.x === fallTarget.x && hole.y === fallTarget.y
-                ? { x: hole.x, y: hole.y, trap: {
-                  guardIndex,
-                  phase: "trapped",
-                  remaining: GUARD_TRAP_TURNS,
-                } }
-                : hole),
-          };
-        }
+        guardResults.push({ guardIndex, outcome: "blocked", decision: guardResult.decision });
+        continue;
+      }
+
+      const attachedFallEntersHole = (currentState.holes ?? []).some((hole) =>
+        !hole.trap && hole.x === fallTarget.x && hole.y === fallTarget.y);
+      const guards = currentState.guards.map((currentGuard, index) => index === guardIndex
+        ? fallTarget : currentGuard);
+      currentState = { ...currentState, guards };
+      if (attachedFallEntersHole) {
+        currentState = {
+          ...currentState,
+          holes: currentState.holes.map((hole) =>
+            hole.x === fallTarget.x && hole.y === fallTarget.y
+              ? { x: hole.x, y: hole.y, trap: {
+                guardIndex,
+                phase: "trapped",
+                remaining: GUARD_TRAP_TURNS,
+              } }
+              : hole),
+        };
       }
     }
     if (fallingIntoHole) {
