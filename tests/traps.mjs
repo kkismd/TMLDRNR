@@ -101,9 +101,12 @@ assert.equal(session.state.turn, 0);
 
 globalThis.document = {
   createDocumentFragment() { return { children: [], append(child) { this.children.push(child); } }; },
-  createElement() { return { className: "", textContent: "" }; },
+  createElement() { return { className: "", textContent: "", style: { setProperty() {} } }; },
 };
-const board = { replaceChildren(fragment) { this.children = fragment.children; } };
+const board = {
+  style: { setProperty() {} },
+  replaceChildren(fragment) { this.children = fragment.children; },
+};
 renderBoard(board, climbing.state);
 assert.ok(board.children.some(({ className, textContent }) =>
   className.includes("tile--guard-climbing") && textContent === "⇧"));

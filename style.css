@@ -31,10 +31,10 @@ header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
 
 .board {
   display: grid;
-  grid-template-columns: repeat(13, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--board-columns, 13), minmax(0, 1fr));
   width: 100%;
   max-width: 39rem;
-  aspect-ratio: 13 / 9;
+  aspect-ratio: var(--board-aspect-ratio, 13 / 9);
   border: 2px solid #72858d;
   background: #18232c;
 }
