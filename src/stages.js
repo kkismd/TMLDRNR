@@ -64,7 +64,7 @@ export const sameRowChaseStage = {
   ],
   player: { x: 1, y: 2 },
   guards: [{ x: 6, y: 2 }],
-  knownSolution: [Action.RIGHT, Action.RIGHT, Action.UP, Action.RIGHT, Action.RIGHT],
+  knownSolution: [Action.RIGHT, Action.RIGHT, Action.UP, Action.RIGHT, Action.WAIT],
 };
 
 export const lureFirstStage = {
@@ -110,8 +110,11 @@ export const waitSyncStage = {
   guards: [{ x: 8, y: 2 }],
   knownSolution: [
     Action.WAIT,
-    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
-    Action.LEFT, Action.LEFT, Action.LEFT,
+    Action.LEFT,
+    // The first WAIT synchronizes with Guard timing; this WAIT advances gravity
+    // after the Player leaves support at (8,1).
+    Action.WAIT,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
     Action.UP,
   ],
 };
@@ -189,7 +192,7 @@ export const goldOutAndBackStage = {
     Action.LEFT, Action.LEFT, Action.RIGHT,
     Action.UP, Action.UP, Action.UP,
     Action.RIGHT, Action.RIGHT, Action.RIGHT,
-    Action.UP, Action.LEFT, Action.LEFT,
+    Action.UP, Action.LEFT, Action.WAIT,
     Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
   ],
 };
@@ -213,7 +216,7 @@ export const lureIntoHoleStage = {
   guards: [{ x: 8, y: 5 }],
   knownSolution: [
     Action.DIG_RIGHT,
-    Action.WAIT, Action.WAIT,
+    Action.WAIT, Action.WAIT, Action.WAIT,
     Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
   ],
 };

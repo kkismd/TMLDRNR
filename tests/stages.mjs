@@ -152,7 +152,7 @@ assert.deepEqual(stages.map(({ id }) => id), [
   "selector-smoke",
 ]);
 const expectedSolutions = new Map([
-  [sameRowChaseStage.id, [Action.RIGHT, Action.RIGHT, Action.UP, Action.RIGHT, Action.RIGHT]],
+  [sameRowChaseStage.id, [Action.RIGHT, Action.RIGHT, Action.UP, Action.RIGHT, Action.WAIT]],
   [sample.id, [
     Action.RIGHT,
     Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
@@ -165,8 +165,8 @@ const expectedSolutions = new Map([
   ]],
   [waitSyncStage.id, [
     Action.WAIT,
-    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
-    Action.LEFT, Action.LEFT, Action.LEFT,
+    Action.LEFT, Action.WAIT,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
     Action.UP,
   ]],
   [leftTieQuirkStage.id, [
@@ -185,12 +185,12 @@ const expectedSolutions = new Map([
     Action.LEFT, Action.LEFT, Action.RIGHT,
     Action.UP, Action.UP, Action.UP,
     Action.RIGHT, Action.RIGHT, Action.RIGHT,
-    Action.UP, Action.LEFT, Action.LEFT,
+    Action.UP, Action.LEFT, Action.WAIT,
     Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
   ]],
   [lureIntoHoleStage.id, [
     Action.DIG_RIGHT,
-    Action.WAIT, Action.WAIT,
+    Action.WAIT, Action.WAIT, Action.WAIT,
     Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
   ]],
 ]);
@@ -214,19 +214,40 @@ for (const stage of validationStages) {
   assert.equal(stage.guards.length, 1, `${stage.id}: validation stage must have one Guard`);
   assert.deepEqual({ player: stage.player, guards: stage.guards }, expectedInitialStates.get(stage.id),
     `${stage.id}: initial actors must match the designed stage`);
+
+  const { state, results } = replayKnownSolution(stage);
+  assert.equal(results.length, stage.knownSolution.length,
+    `${stage.id}: knownSolution must be fully consumed`);
+  assert.ok(results.every(({ kind }) => kind === "accepted"),
+    `${stage.id}: knownSolution must contain no rejected or terminal action`);
+  assert.equal(state.status, "won", `${stage.id}: knownSolution must clear the stage`);
 }
 
 assert.equal(goldOutAndBackStage.tiles.length, 9);
 assert.ok(goldOutAndBackStage.tiles.every((row) => row.length === 13));
 assert.deepEqual(goldOutAndBackStage.gold, [{ x: 5, y: 2 }]);
 assert.equal(goldOutAndBackStage.knownSolution.length, 16);
-assert.equal(lureIntoHoleStage.knownSolution.length, 8);
+assert.equal(lureIntoHoleStage.knownSolution.length, 9);
 assert.deepEqual(lureIntoHoleStage.gold ?? [], []);
 assert.equal(lureIntoHoleStage.tiles[5], "###      E###");
 assert.equal(9 - 3 + 1, 7); // Horizontal encounter segment x=3..9.
 assert.equal(lureIntoHoleStage.guards[0].x - lureIntoHoleStage.player.x, 4);
 assert.equal(step(createSampleState(lureIntoHoleStage), Action.DIG_RIGHT).kind, "accepted");
 assert.equal(step(createSampleState(lureIntoHoleStage), Action.DIG_LEFT).kind, "accepted");
+let lureState = createSampleState(lureIntoHoleStage);
+for (const action of lureIntoHoleStage.knownSolution.slice(0, 3)) {
+  lureState = step(lureState, action).state;
+}
+assert.deepEqual(lureState.guards[0], { x: 5, y: 5 },
+  "lure-into-hole: turn 3 Guard must be on the cell above the active hole");
+assert.equal(lureState.holes[0].trap, undefined,
+  "lure-into-hole: Guard must remain unsupported and untrapped at turn 3");
+lureState = step(lureState, Action.WAIT).state;
+assert.deepEqual(lureState.guards[0], { x: 5, y: 6 },
+  "lure-into-hole: turn 4 gravity must move Guard into the hole");
+assert.deepEqual(lureState.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 3 },
+  "lure-into-hole: Guard must enter the three-turn trap at turn 4");
 assert.equal(gatekeeperWaitStage.tiles.length, 9);
 assert.ok(gatekeeperWaitStage.tiles.every((row) => row.length === 13));
 assert.equal(gatekeeperWaitStage.guards.length, 1);
