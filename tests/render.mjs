@@ -11,20 +11,25 @@ function installDocument() {
       };
     },
     createElement() {
-      return { className: "", textContent: "" };
+      return { className: "", textContent: "", style: { setProperty(name, value) { this[name] = String(value); } } };
     },
   };
 }
 
 installDocument();
-const board = { replaceChildren(fragment) { this.children = fragment.children; } };
+const board = {
+  style: { setProperty(name, value) { this[name] = String(value); } },
+  replaceChildren(fragment) { this.children = fragment.children; },
+};
 const stage = {
-  tiles: ["#####", "# E #", "#####"],
+  tiles: ["#############", "# E         #", "#############", ...Array.from({ length: 5 }, () => "#           #"), "#############"],
   player: { x: 1, y: 1 },
   guards: [],
   gold: [{ x: 3, y: 1 }],
 };
 renderBoard(board, createSampleState(stage));
+assert.equal(board.style["--board-columns"], "13");
+assert.equal(board.style["--board-aspect-ratio"], "13 / 9");
 assert.ok(board.children.some(({ className, textContent }) =>
   className.includes("tile--gold") && textContent === "●"));
 assert.ok(board.children.some(({ className }) => className.includes("tile--goal-inactive")));
@@ -48,6 +53,8 @@ assert.equal(getStatusLabel({
 assert.equal(getStatusLabel({ ...activeState, status: "lost" }), "LOST");
 assert.equal(getStatusLabel({ ...activeState, status: "won" }), "CLEAR");
 renderBoard(board, activeState);
+assert.equal(board.style["--board-columns"], "13");
+assert.equal(board.style["--board-aspect-ratio"], "13 / 9");
 assert.ok(board.children.some(({ className }) => className.includes("tile--goal-active")));
 assert.ok(!board.children.some(({ className }) => className === "tile tile--gold"));
 
@@ -67,5 +74,23 @@ const playerOnWarningHole = board.children.find(({ className }) =>
   className.includes("tile--player"));
 assert.ok(playerOnWarningHole.className.includes("tile--hole-warning"));
 assert.equal(playerOnWarningHole.textContent, "●");
+
+const largeStage = {
+  tiles: ["###############", ...Array.from({ length: 9 }, () => "#             #"), "###############"],
+  player: { x: 14, y: 1 },
+  guards: [{ x: 0, y: 2 }],
+  gold: [{ x: 14, y: 2 }],
+};
+renderBoard(board, createSampleState(largeStage));
+assert.equal(board.children.length, 165);
+assert.equal(board.style["--board-columns"], "15");
+assert.equal(board.style["--board-aspect-ratio"], "15 / 11");
+assert.ok(board.children[1 * 15 + 14].className.includes("tile--player"));
+assert.ok(board.children[2 * 15].className.includes("tile--guard"));
+assert.ok(board.children[2 * 15 + 14].className.includes("tile--gold"));
+
+renderBoard(board, createSampleState(stage));
+assert.equal(board.style["--board-columns"], "13");
+assert.equal(board.style["--board-aspect-ratio"], "13 / 9");
 
 console.log("Renderer objective display cases passed.");

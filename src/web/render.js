@@ -15,6 +15,9 @@ export function getStatusLabel(state) {
 }
 
 export function renderBoard(element, state) {
+  element.style.setProperty("--board-columns", state.width);
+  element.style.setProperty("--board-aspect-ratio", `${state.width} / ${state.height}`);
+
   const cells = document.createDocumentFragment();
 
   for (let y = 0; y < state.height; y += 1) {
