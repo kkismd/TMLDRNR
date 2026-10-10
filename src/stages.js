@@ -252,6 +252,38 @@ export const integratedRouteStage = {
   ],
 };
 
+export const twoAreaRoundTripStage = {
+  id: "two-area-round-trip",
+  title: "戻る道",
+  theme: "別エリアでGoldを取る間に前エリアのGuard配置も変化し、帰路では2体の位置関係を読み直す",
+  tiles: [
+    "###############",
+    "#   -----H    #",
+    "#        H    #",
+    "#    H   H    #",
+    "#   EH   H    #",
+    "#####H###H#####",
+    "#    H   H    #",
+    "#    H   H    #",
+    "#    H   H    #",
+    "###############",
+    "###############",
+  ],
+  player: { x: 2, y: 4 },
+  guards: [{ x: 12, y: 4 }, { x: 1, y: 8 }],
+  gold: [{ x: 11, y: 8 }],
+  knownSolution: [
+    Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.DIG_RIGHT, Action.RIGHT,
+    Action.WAIT, Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.DIG_LEFT, Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.LEFT, Action.LEFT,
+    Action.UP, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
+    Action.DOWN, Action.WAIT, Action.WAIT,
+  ],
+};
+
 export const stages = [
   sameRowChaseStage,
   sampleStage,
@@ -262,5 +294,6 @@ export const stages = [
   goldOutAndBackStage,
   lureIntoHoleStage,
   integratedRouteStage,
+  twoAreaRoundTripStage,
   selectorSmokeStage,
 ];
