@@ -221,6 +221,37 @@ export const lureIntoHoleStage = {
   ],
 };
 
+export const integratedRouteStage = {
+  id: "integrated-route",
+  title: "道を作る",
+  theme: "穴で進路を作り、Guardを一時的な足場として利用し、上段のropeからGoalへ戻る",
+  tiles: [
+    "#############",
+    "#   -----H  #",
+    "#       #H  #",
+    "#       #H  #",
+    "#     #E#H  #",
+    "#########H###",
+    "###      H  #",
+    "#############",
+    "#############",
+  ],
+  player: { x: 2, y: 4 },
+  guards: [{ x: 11, y: 4 }],
+  gold: [{ x: 5, y: 6 }],
+  knownSolution: [
+    Action.RIGHT, Action.RIGHT,
+    Action.DIG_RIGHT,
+    Action.RIGHT, Action.WAIT, Action.WAIT,
+    Action.RIGHT,
+    Action.DIG_RIGHT, Action.WAIT,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+    Action.LEFT, Action.LEFT,
+    Action.DOWN, Action.WAIT, Action.WAIT,
+  ],
+};
+
 export const stages = [
   sameRowChaseStage,
   sampleStage,
@@ -230,5 +261,6 @@ export const stages = [
   gatekeeperWaitStage,
   goldOutAndBackStage,
   lureIntoHoleStage,
+  integratedRouteStage,
   selectorSmokeStage,
 ];

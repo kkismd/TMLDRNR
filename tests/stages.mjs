@@ -6,6 +6,7 @@ import {
   leftTieQuirkStage,
   goldOutAndBackStage,
   gatekeeperWaitStage,
+  integratedRouteStage,
   lureIntoHoleStage,
   lureFirstStage,
   sameRowChaseStage,
@@ -129,6 +130,7 @@ const validationStages = [
   gatekeeperWaitStage,
   goldOutAndBackStage,
   lureIntoHoleStage,
+  integratedRouteStage,
 ];
 assert.deepEqual(validationStages.map(({ id }) => id), [
   "same-row-chase",
@@ -139,6 +141,7 @@ assert.deepEqual(validationStages.map(({ id }) => id), [
   "gatekeeper-wait",
   "gold-out-and-back",
   "lure-into-hole",
+  "integrated-route",
 ]);
 assert.deepEqual(stages.map(({ id }) => id), [
   "same-row-chase",
@@ -149,6 +152,7 @@ assert.deepEqual(stages.map(({ id }) => id), [
   "gatekeeper-wait",
   "gold-out-and-back",
   "lure-into-hole",
+  "integrated-route",
   "selector-smoke",
 ]);
 const expectedSolutions = new Map([
@@ -193,6 +197,17 @@ const expectedSolutions = new Map([
     Action.WAIT, Action.WAIT, Action.WAIT,
     Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
   ]],
+  [integratedRouteStage.id, [
+    Action.RIGHT, Action.RIGHT,
+    Action.DIG_RIGHT,
+    Action.RIGHT, Action.WAIT, Action.WAIT,
+    Action.RIGHT,
+    Action.DIG_RIGHT, Action.WAIT,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+    Action.LEFT, Action.LEFT,
+    Action.DOWN, Action.WAIT, Action.WAIT,
+  ]],
 ]);
 
 const expectedInitialStates = new Map([
@@ -204,6 +219,7 @@ const expectedInitialStates = new Map([
   ["gatekeeper-wait", { player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }] }],
   ["gold-out-and-back", { player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }] }],
   ["lure-into-hole", { player: { x: 4, y: 5 }, guards: [{ x: 8, y: 5 }] }],
+  ["integrated-route", { player: { x: 2, y: 4 }, guards: [{ x: 11, y: 4 }] }],
 ]);
 for (const stage of validationStages) {
   assert.deepEqual(stage.knownSolution, expectedSolutions.get(stage.id),
@@ -228,6 +244,66 @@ assert.ok(goldOutAndBackStage.tiles.every((row) => row.length === 13));
 assert.deepEqual(goldOutAndBackStage.gold, [{ x: 5, y: 2 }]);
 assert.equal(goldOutAndBackStage.knownSolution.length, 16);
 assert.equal(lureIntoHoleStage.knownSolution.length, 9);
+assert.equal(integratedRouteStage.knownSolution.length, 22);
+assert.deepEqual(integratedRouteStage.gold, [{ x: 5, y: 6 }]);
+assert.deepEqual(integratedRouteStage.tiles, [
+  "#############",
+  "#   -----H  #",
+  "#       #H  #",
+  "#       #H  #",
+  "#     #E#H  #",
+  "#########H###",
+  "###      H  #",
+  "#############",
+  "#############",
+]);
+assert.deepEqual([...integratedRouteStage.tiles.entries()]
+  .flatMap(([y, row]) => [...row].flatMap((tile, x) => tile === "E" ? [{ x, y }] : [])),
+[{ x: 7, y: 4 }]);
+let integratedState = createSampleState(integratedRouteStage);
+const integratedResults = [];
+for (const action of integratedRouteStage.knownSolution) {
+  const result = step(integratedState, action);
+  integratedResults.push(result);
+  assert.equal(result.kind, "accepted", `integrated-route: ${action} must be accepted`);
+  integratedState = result.state;
+}
+assert.equal(integratedState.status, "won");
+assert.deepEqual(integratedResults[2].state.holes[0], { x: 5, y: 5, remaining: 6 },
+  "integrated-route: first Dig must open the Player descent route");
+assert.deepEqual(integratedResults[5].state.player, { x: 5, y: 6 });
+assert.deepEqual(integratedResults[5].state.gold, [],
+  "integrated-route: Player must collect Gold in the lower corridor");
+assert.deepEqual(integratedResults[8].state.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 3 },
+  "integrated-route: second Dig must trap the Guard");
+assert.deepEqual(integratedResults[9].state.player, { x: 7, y: 6 });
+assert.deepEqual(integratedResults[9].state.guards, [{ x: 7, y: 7 }],
+  "integrated-route: trapped Guard must support Player crossing above it");
+assert.deepEqual(integratedResults[16].state.player, { x: 9, y: 1 },
+  "integrated-route: Player must return to the upper ladder");
+assert.deepEqual(integratedResults[18].state.player, { x: 7, y: 1 },
+  "integrated-route: Player must reach the upper rope");
+assert.deepEqual(integratedResults[19].state.player, { x: 7, y: 2 },
+  "integrated-route: DOWN must release Player from the rope");
+assert.deepEqual(integratedResults[21].state.player, { x: 7, y: 4 },
+  "integrated-route: gravity WAITs must reach Goal");
+assert.deepEqual(replayKnownSolution(integratedRouteStage), replayKnownSolution(integratedRouteStage),
+  "integrated-route: knownSolution replay must remain deterministic");
+
+let skippedTrapState = createSampleState(integratedRouteStage);
+const withoutGuardTrap = integratedRouteStage.knownSolution.filter((_, index) => index !== 7 && index !== 8);
+for (const action of withoutGuardTrap) {
+  const result = step(skippedTrapState, action);
+  assert.notEqual(result.kind, "rejected",
+    "integrated-route: trap omission sequence must be accepted until collision");
+  skippedTrapState = result.state;
+  if (skippedTrapState.status === "lost") break;
+}
+assert.equal(skippedTrapState.status, "lost",
+  "integrated-route: walking straight without the second Dig must lose to Guard collision");
+assert.deepEqual(skippedTrapState.player, { x: 7, y: 6 });
+assert.deepEqual(skippedTrapState.guards, [{ x: 7, y: 6 }]);
 assert.deepEqual(lureIntoHoleStage.gold ?? [], []);
 assert.equal(lureIntoHoleStage.tiles[5], "###      E###");
 assert.equal(9 - 3 + 1, 7); // Horizontal encounter segment x=3..9.
