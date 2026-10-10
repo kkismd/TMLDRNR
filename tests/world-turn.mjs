@@ -74,7 +74,7 @@ check(down, Action.DOWN, "accepted", { x: 3, y: 2 }, { x: 4, y: 2 }, "left", "ch
 const rope = game(["#########", "#       #", "# ----  #", "#       #", "#       #", "#########"],
   { x: 3, y: 2 }, { x: 5, y: 2 });
 check(rope, Action.LEFT, "accepted", { x: 2, y: 2 }, { x: 4, y: 2 }, "left", "chase");
-check(rope, Action.DOWN, "accepted", { x: 3, y: 4 }, { x: 5, y: 4 }, "down", "candidate");
+check(rope, Action.DOWN, "accepted", { x: 3, y: 3 }, { x: 5, y: 3 }, "down", "candidate");
 
 const stationary = game(["#######", "# #   #", "#######"],
   { x: 1, y: 1 }, { x: 4, y: 1 });
@@ -115,32 +115,34 @@ const fallingGuard = game(["#########", "#       #", "###   ###", "#########"],
 check(fallingGuard, Action.WAIT, "accepted", { x: 2, y: 1 },
   { x: 4, y: 2 }, null, "gravity");
 
-// Planning follows the base floor across a hole; horizontal movement resolves gravity now.
+// Planning follows the base floor across a hole; the Guard enters the hole by its chosen move.
 const guardLuredAcrossHole = {
   ...game(["#########", "#       #", "#########", "#########"],
     { x: 6, y: 1 }, { x: 2, y: 1 }),
   holes: [{ x: 3, y: 2, remaining: 5 }],
 };
 const ontoHole = step(guardLuredAcrossHole, Action.WAIT);
-assert.deepEqual(ontoHole.state.guards[0], { x: 3, y: 2 });
+assert.deepEqual(ontoHole.state.guards[0], { x: 3, y: 1 });
 assert.equal(ontoHole.guardDecision.kind, "chase");
-assert.deepEqual(ontoHole.state.holes[0].trap,
+assert.equal(ontoHole.state.holes[0].trap, undefined);
+const fallIntoHole = step(ontoHole.state, Action.WAIT);
+assert.deepEqual(fallIntoHole.state.guards[0], { x: 3, y: 2 });
+assert.deepEqual(fallIntoHole.state.holes[0].trap,
   { guardIndex: 0, phase: "trapped", remaining: 3 });
 
-// The horizontal destination is checked before attached gravity.
+// A supported horizontal move does not add same-step gravity.
 const horizontalDestinationCollision = game(
   ["#########", "#       #", "#### ####", "#########"],
   { x: 3, y: 1 }, { x: 5, y: 1 });
 const collisionBeforeFall = step(horizontalDestinationCollision, Action.RIGHT);
 assert.equal(collisionBeforeFall.state.status, "lost");
-assert.deepEqual(collisionBeforeFall.defeat, { phase: "guard", guardIndex: 0 });
-assert.deepEqual(collisionBeforeFall.state.player, { x: 4, y: 2 });
-assert.deepEqual(collisionBeforeFall.state.guards[0], { x: 4, y: 2 });
+assert.deepEqual(collisionBeforeFall.state.player, { x: 4, y: 1 });
+assert.deepEqual(collisionBeforeFall.state.guards[0], { x: 4, y: 1 });
 
 // The fall destination is checked after attached gravity.
 const fallDestinationCollision = game(
   ["#########", "#       #", "#### ####", "#########"],
-  { x: 4, y: 2 }, { x: 5, y: 1 });
+  { x: 4, y: 1 }, { x: 4, y: 2 });
 const collisionAfterFall = step(fallDestinationCollision, Action.WAIT);
 assert.equal(collisionAfterFall.state.status, "lost");
 assert.deepEqual(collisionAfterFall.state.guards[0], { x: 4, y: 2 });
@@ -172,7 +174,7 @@ assert.equal(cadenceSkipped.guardOutcome, "skip");
 assert.deepEqual(cadenceSkipped.state.guards[0], cadenceSkipHole.guards[0]);
 assert.equal(cadenceSkipped.state.holes[0].trap, undefined);
 
-// A planned move occurs before gravity; an occupied fall cell blocks only the fall.
+// A supported move does not fall, and the following unsupported update is blocked by occupancy.
 const blockedAttachedGravity = {
   ...game(["#########", "#       #", "#########", "#########"],
     { x: 6, y: 1 }, { x: 2, y: 1 }),
@@ -191,10 +193,10 @@ assert.deepEqual(step(structuredClone(blockedAttachedGravity), Action.WAIT),
 const longGuardFall = game(["#########", "#       #", "###   ###", "###   ###", "#########"],
   { x: 2, y: 1 }, { x: 4, y: 1 });
 const guardFallOne = check({ ...longGuardFall, turn: 1 }, Action.WAIT, "accepted",
-  { x: 2, y: 1 }, { x: 4, y: 3 }, null, "gravity", GuardCadence.EVERY_OTHER);
+  { x: 2, y: 1 }, { x: 4, y: 2 }, null, "gravity", GuardCadence.EVERY_OTHER);
 const guardFallTwo = step(guardFallOne.state, Action.WAIT, GuardCadence.EVERY_OTHER);
 assert.deepEqual(guardFallTwo.state.guards[0], { x: 4, y: 3 });
-assert.equal(guardFallTwo.guardOutcome, "stay");
+assert.equal(guardFallTwo.guardOutcome, "gravity");
 
 const twoGuardFall = {
   ...longGuardFall,
@@ -204,22 +206,45 @@ const twoGuardFall = {
 const countFallOne = step(twoGuardFall, Action.WAIT, GuardCadence.BY_GUARD_COUNT);
 assert.equal(countFallOne.state.turn, 2); // A supported Guard would skip this turn.
 assert.deepEqual(countFallOne.guardResults.map(({ outcome }) => outcome), ["gravity", "skip"]);
-assert.deepEqual(countFallOne.state.guards, [{ x: 4, y: 3 }, { x: 6, y: 1 }]);
+assert.deepEqual(countFallOne.state.guards, [{ x: 4, y: 2 }, { x: 6, y: 1 }]);
 assert.deepEqual(step(structuredClone(twoGuardFall), Action.WAIT, GuardCadence.BY_GUARD_COUNT),
   countFallOne);
 const countFallTwo = step(countFallOne.state, Action.WAIT, GuardCadence.BY_GUARD_COUNT);
-assert.deepEqual(countFallTwo.guardResults.map(({ outcome }) => outcome), ["stay", "move"]);
-assert.deepEqual(countFallTwo.state.guards, [{ x: 4, y: 3 }, { x: 5, y: 3 }]);
+assert.deepEqual(countFallTwo.guardResults.map(({ outcome }) => outcome), ["gravity", "move"]);
+assert.deepEqual(countFallTwo.state.guards, [{ x: 4, y: 3 }, { x: 5, y: 1 }]);
 
 const fallingPlayer = game(["#########", "#       #", "##      #", "##      #", "#########"],
   { x: 1, y: 1 }, { x: 5, y: 1 });
-const fallOne = check(fallingPlayer, Action.RIGHT, "accepted", { x: 2, y: 3 },
-  { x: 5, y: 3 }, null, "gravity");
-const fallTwo = step(fallOne.state, Action.RIGHT);
+const fallOne = check(fallingPlayer, Action.RIGHT, "accepted", { x: 2, y: 1 },
+  { x: 5, y: 2 }, null, "gravity");
+const fallTwo = step(fallOne.state, Action.WAIT);
 assert.equal(fallTwo.kind, "accepted");
 assert.equal(fallTwo.state.turn, fallingPlayer.turn + 2);
-assert.deepEqual(fallTwo.state.player, { x: 3, y: 3 });
+assert.deepEqual(fallTwo.state.player, { x: 2, y: 2 });
 assert.equal(fallTwo.kind, "accepted");
+
+const unsupportedPlayer = fallOne.state;
+const rejectedWhileFalling = step(unsupportedPlayer, Action.LEFT);
+assert.equal(rejectedWhileFalling.kind, "rejected");
+assert.strictEqual(rejectedWhileFalling.state, unsupportedPlayer);
+assert.equal(rejectedWhileFalling.guardPhase, false);
+assert.equal(rejectedWhileFalling.state.turn, unsupportedPlayer.turn);
+let longPlayerFall = game(["#######", "#     #", "#     #", "#     #", "#######"],
+  { x: 2, y: 1 }, { x: 5, y: 1 });
+for (const expectedY of [2, 3]) {
+  const result = step(longPlayerFall, Action.WAIT);
+  assert.equal(result.kind, "accepted");
+  assert.deepEqual(result.state.player, { x: 2, y: expectedY });
+  assert.equal(result.state.turn, longPlayerFall.turn + 1);
+  longPlayerFall = result.state;
+}
+
+const lowerActorFirst = game(["#######", "#     #", "#     #", "#     #", "#######"],
+  { x: 3, y: 2 }, { x: 3, y: 1 });
+const lowerFall = step(lowerActorFirst, Action.WAIT);
+assert.deepEqual(lowerFall.state.player, { x: 3, y: 3 });
+assert.deepEqual(lowerFall.state.guards[0], { x: 3, y: 2 });
+assert.equal(lowerFall.state.status, "playing");
 
 const actions = [Action.LEFT, Action.RIGHT, Action.WAIT, Action.RIGHT];
 function run(initial, cadence = GuardCadence.EVERY_TURN) {
@@ -346,10 +371,11 @@ const playerFallContact = createSampleState({
 });
 const playerFallDeath = step(playerFallContact, Action.RIGHT);
 assert.equal(playerFallDeath.kind, "accepted");
-assert.equal(playerFallDeath.state.status, "lost");
-assert.deepEqual(playerFallDeath.defeat, { phase: "player", guardIndex: 0 });
-assert.deepEqual(playerFallDeath.state.player, { x: 3, y: 2 });
-assert.equal(playerFallDeath.guardPhase, false);
+assert.equal(playerFallDeath.state.status, "playing");
+assert.deepEqual(playerFallDeath.state.player, { x: 3, y: 1 });
+const playerFallDeathNext = step(playerFallDeath.state, Action.WAIT);
+assert.equal(playerFallDeathNext.state.status, "lost");
+assert.deepEqual(playerFallDeathNext.defeat, { phase: "player", guardIndex: 0 });
 
 const playerLadderContact = createSampleState({
   tiles: ["#########", "###H#####", "###H#####", "#########"],
@@ -458,36 +484,42 @@ const fallingGoal = game(["#######", "#     #", "##E   #", "#######"],
 assert.equal(isSupported(fallingGoal), true);
 const fallClear = step(fallingGoal, Action.RIGHT);
 assert.equal(fallClear.kind, "accepted");
-assert.deepEqual(fallClear.state.player, { x: 2, y: 2 });
-assert.equal(fallClear.state.status, "won");
-assert.equal(fallClear.state.turn, 1);
-assert.deepEqual(fallClear.state.guards, fallingGoal.guards);
-assert.equal(fallClear.guardPhase, false);
-assert.deepEqual(fallClear.clear, { phase: "player" });
+assert.deepEqual(fallClear.state.player, { x: 2, y: 1 });
+assert.equal(fallClear.state.status, "playing");
+const fallClearNext = step(fallClear.state, Action.WAIT);
+assert.deepEqual(fallClearNext.state.player, { x: 2, y: 2 });
+assert.equal(fallClearNext.state.status, "won");
+assert.equal(fallClearNext.state.turn, 2);
+assert.deepEqual(fallClearNext.clear, { phase: "player" });
 
-// A multi-cell fall checks every crossed cell in collision -> Gold -> Goal order.
+// Every one-cell fall checks collision -> Gold -> Goal order.
 const fallingGoldGoal = createSampleState({
   tiles: ["######", "#    #", "##   #", "##E  #", "######"],
   player: { x: 1, y: 1 }, guards: [], gold: [{ x: 2, y: 2 }],
 });
-const goldThenGoal = step(fallingGoldGoal, Action.RIGHT);
+const fallingGoldSetup = step(fallingGoldGoal, Action.RIGHT);
+const goldPickupFall = step(fallingGoldSetup.state, Action.WAIT);
+assert.deepEqual(goldPickupFall.state.player, { x: 2, y: 2 });
+assert.deepEqual(goldPickupFall.state.gold, []);
+const goldThenGoal = step(goldPickupFall.state, Action.WAIT);
 assert.equal(goldThenGoal.kind, "accepted");
 assert.deepEqual(goldThenGoal.state.player, { x: 2, y: 3 });
 assert.deepEqual(goldThenGoal.state.gold, []);
 assert.equal(goldThenGoal.state.status, "won");
-assert.equal(goldThenGoal.state.turn, 1);
+assert.equal(goldThenGoal.state.turn, 3);
 assert.deepEqual(goldThenGoal.clear, { phase: "player" });
 
 const fallingGoldCollision = createSampleState({
   tiles: ["######", "#    #", "##   #", "######"],
   player: { x: 1, y: 1 }, guards: [{ x: 2, y: 2 }], gold: [{ x: 2, y: 2 }],
 });
-const collisionBeforeGold = step(fallingGoldCollision, Action.RIGHT);
+const collisionSetup = step(fallingGoldCollision, Action.RIGHT);
+const collisionBeforeGold = step(collisionSetup.state, Action.WAIT);
 assert.equal(collisionBeforeGold.state.status, "lost");
 assert.deepEqual(collisionBeforeGold.defeat, { phase: "player", guardIndex: 0 });
 assert.deepEqual(collisionBeforeGold.state.gold, [{ x: 2, y: 2 }]);
 
-// Fall distance does not consume extra hole lifecycle turns.
+// Each accepted fall WAIT advances the hole lifecycle.
 const fallingPastHole = {
   ...fallingPlayer,
   holes: [{ x: 6, y: 2, remaining: 4 }],
@@ -496,6 +528,8 @@ const oneActionFall = step(fallingPastHole, Action.RIGHT);
 assert.equal(oneActionFall.kind, "accepted");
 assert.equal(oneActionFall.state.turn, fallingPastHole.turn + 1);
 assert.equal(oneActionFall.state.holes[0].remaining, 3);
+const secondFallStep = step(oneActionFall.state, Action.WAIT);
+assert.equal(secondFallStep.state.holes[0].remaining, 2);
 
 const onGoal = game(goalTiles, { x: 2, y: 1 }, { x: 5, y: 1 });
 const waitClear = step(onGoal, Action.WAIT);
