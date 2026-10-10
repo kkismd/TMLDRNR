@@ -63,13 +63,17 @@ const fall = falling.play(Action.RIGHT);
 assert.equal(fall.kind, "accepted");
 assert.equal(falling.historyLength, 1);
 assert.equal(fall.state.turn, 1);
-assert.deepEqual(fall.state.player, { x: 2, y: 2 });
+assert.deepEqual(fall.state.player, { x: 2, y: 1 });
 assert.strictEqual(falling.undo(), beforeFall);
 assert.equal(falling.state.turn, 0);
 assert.deepEqual(falling.play(Action.RIGHT), fall);
 assert.equal(fall.kind, "accepted");
 assert.equal(fall.state.turn, beforeFall.turn + 1);
-assert.equal(fall.state.player.y, 2);
+assert.equal(fall.state.player.y, 1);
+const beforeFallWait = falling.state;
+const fallStep = falling.play(Action.WAIT);
+assert.equal(fallStep.state.player.y, 2);
+assert.strictEqual(falling.undo(), beforeFallWait);
 
 
 const lossStage = {

@@ -32,14 +32,13 @@ const digAheadOfGuard = createSampleState({
 const digCommit = step(digAheadOfGuard, Action.DIG_RIGHT);
 assert.equal(digCommit.state.status, "playing");
 assert.deepEqual(digCommit.guardDecision, { direction: "left", kind: "chase" });
-assert.deepEqual(digCommit.state.guards[0], { x: 2, y: 2 });
-assert.deepEqual(digCommit.state.holes,
-  [{ x: 2, y: 2, trap: { guardIndex: 0, phase: "trapped", remaining: 3 } }]);
+assert.deepEqual(digCommit.state.guards[0], { x: 2, y: 1 });
+assert.deepEqual(digCommit.state.holes, [{ x: 2, y: 2, remaining: HOLE_LIFETIME_TURNS }]);
 const nextGuardUpdate = step(digCommit.state, Action.WAIT);
 assert.equal(nextGuardUpdate.guardDecision, null);
 assert.deepEqual(nextGuardUpdate.state.guards[0], { x: 2, y: 2 });
 assert.deepEqual(nextGuardUpdate.state.holes[0].trap,
-  { guardIndex: 0, phase: "trapped", remaining: 2 });
+  { guardIndex: 0, phase: "trapped", remaining: 3 });
 
 const adjacentGuard = createSampleState({
   tiles, player: { x: 2, y: 1 }, guards: [{ x: 3, y: 1 }],
@@ -100,7 +99,7 @@ const unsupported = createSampleState({
   tiles: ["#######", "#     #", "#     #", "#######"],
   player: { x: 2, y: 1 }, guards: [],
 });
-assert.throws(() => step(unsupported, Action.DIG_RIGHT), /settled, supported position/);
+assert.equal(step(unsupported, Action.DIG_RIGHT).kind, "rejected");
 
 let lifecycle = rightHole;
 for (let remaining = 5; remaining >= 1; remaining -= 1) {
