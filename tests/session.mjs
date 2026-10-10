@@ -67,6 +67,10 @@ assert.deepEqual(fall.state.player, { x: 2, y: 2 });
 assert.strictEqual(falling.undo(), beforeFall);
 assert.equal(falling.state.turn, 0);
 assert.deepEqual(falling.play(Action.RIGHT), fall);
+assert.equal(fall.kind, "accepted");
+assert.equal(fall.state.turn, beforeFall.turn + 1);
+assert.equal(fall.state.player.y, 2);
+
 
 const lossStage = {
   tiles: ["#######", "#     #", "#######"],

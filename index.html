@@ -34,11 +34,10 @@
           <button type="button" data-action="down" class="down">下 ↓</button>
           <button type="button" data-action="dig-left" class="dig-left">左を掘る</button>
           <button type="button" data-action="dig-right" class="dig-right">右を掘る</button>
-          <button type="button" data-action="continue" class="continue">落下を 1 turn 進める</button>
           <button type="button" data-command="undo" class="undo">Undo</button>
           <button type="button" data-command="restart" class="restart">Restart</button>
         </div>
-        <p class="hint">矢印キー / Space キーでも入力できます。落下中は任意 Action を無視し、1 マス落下します。穴は ○、復元前は ◌ で表示します。</p>
+        <p class="hint">矢印キー / Space キーでも入力できます。Action の結果による落下は、安定位置または勝敗判定まで自動で解決します。穴は ○、復元前は ◌ で表示します。</p>
         <p class="diagnostic">Turn: <output id="turn" aria-live="polite">0</output></p>
         <p class="diagnostic">状態: <output id="status" aria-live="polite">READY</output></p>
         <p class="diagnostic">最後の遷移: <output id="last-action" aria-live="polite">なし</output></p>

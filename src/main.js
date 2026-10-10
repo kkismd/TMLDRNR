@@ -1,5 +1,3 @@
-import { isPlayerSupported } from "./core/step.js";
-import { Action } from "./core/actions.js";
 import { stages } from "./stages.js";
 import { bindInput } from "./web/input.js";
 import { renderBoard } from "./web/render.js";
@@ -12,7 +10,6 @@ const stageSelect = document.querySelector("#stage-select");
 const turnOutput = document.querySelector("#turn");
 const resultOutput = document.querySelector("#last-action");
 const statusOutput = document.querySelector("#status");
-const continueButton = document.querySelector("[data-action='continue']");
 const undoButton = document.querySelector("[data-command='undo']");
 
 for (const stage of stages) {
@@ -27,11 +24,8 @@ function render() {
   const state = session.state;
   renderBoard(board, state);
   turnOutput.value = String(state.turn);
-  const supported = isPlayerSupported(state);
   statusOutput.value = state.status === "lost" ? "LOST" :
-    state.status === "won" ? "CLEAR" :
-    supported ? "READY" : "FALL — 次の落下を進めてください";
-  continueButton.disabled = state.status === "lost" || state.status === "won" || supported;
+    state.status === "won" ? "CLEAR" : "READY";
   undoButton.disabled = session.historyLength === 0;
 }
 
@@ -58,9 +52,6 @@ stageSelect.addEventListener("change", () => {
 });
 bindInput(document.querySelector(".controls"), (action) => {
   showResult(action, session.play(action));
-}, () => {
-  if (session.state.status !== "playing" || isPlayerSupported(session.state)) return;
-  showResult("continue", session.play(Action.WAIT));
 }, (command) => {
   if (command === "undo") {
     session.undo();
