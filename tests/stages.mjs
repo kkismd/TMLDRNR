@@ -12,6 +12,7 @@ import {
   sameRowChaseStage,
   selectorSmokeStage,
   stages,
+  twoAreaRoundTripStage,
   waitSyncStage,
 } from "../src/stages.js";
 
@@ -153,6 +154,7 @@ assert.deepEqual(stages.map(({ id }) => id), [
   "gold-out-and-back",
   "lure-into-hole",
   "integrated-route",
+  "two-area-round-trip",
   "selector-smoke",
 ]);
 const expectedSolutions = new Map([
@@ -245,6 +247,95 @@ assert.deepEqual(goldOutAndBackStage.gold, [{ x: 5, y: 2 }]);
 assert.equal(goldOutAndBackStage.knownSolution.length, 16);
 assert.equal(lureIntoHoleStage.knownSolution.length, 9);
 assert.equal(integratedRouteStage.knownSolution.length, 22);
+
+assert.equal(twoAreaRoundTripStage.tiles.length, 11);
+assert.ok(twoAreaRoundTripStage.tiles.every((row) => row.length === 15));
+assert.deepEqual(twoAreaRoundTripStage.tiles, [
+  "###############",
+  "#   -----H    #",
+  "#        H    #",
+  "#    H   H    #",
+  "#   EH   H    #",
+  "#####H###H#####",
+  "#    H   H    #",
+  "#    H   H    #",
+  "#    H   H    #",
+  "###############",
+  "###############",
+]);
+assert.deepEqual(twoAreaRoundTripStage.player, { x: 2, y: 4 });
+assert.deepEqual(twoAreaRoundTripStage.guards, [{ x: 12, y: 4 }, { x: 1, y: 8 }],
+  "two-area-round-trip: Guard index 0 is A and index 1 is B");
+assert.deepEqual(twoAreaRoundTripStage.gold, [{ x: 11, y: 8 }]);
+assert.deepEqual([...twoAreaRoundTripStage.tiles.entries()]
+  .flatMap(([y, row]) => [...row].flatMap((tile, x) => tile === "E" ? [{ x, y }] : [])),
+[{ x: 4, y: 4 }]);
+assert.equal(twoAreaRoundTripStage.knownSolution.length, 35);
+assert.deepEqual(twoAreaRoundTripStage.knownSolution, [
+  Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.DIG_RIGHT, Action.RIGHT,
+  Action.WAIT, Action.WAIT, Action.WAIT, Action.WAIT,
+  Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+  Action.DIG_LEFT, Action.WAIT, Action.WAIT, Action.WAIT,
+  Action.LEFT, Action.LEFT,
+  Action.UP, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+  Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
+  Action.DOWN, Action.WAIT, Action.WAIT,
+]);
+let roundTripState = createSampleState(twoAreaRoundTripStage);
+const roundTripResults = [];
+for (const action of twoAreaRoundTripStage.knownSolution) {
+  const result = step(roundTripState, action);
+  roundTripResults.push(result);
+  assert.equal(result.kind, "accepted", `two-area-round-trip: ${action} must be accepted`);
+  roundTripState = result.state;
+}
+assert.equal(roundTripState.status, "won");
+assert.deepEqual(replayKnownSolution(twoAreaRoundTripStage), replayKnownSolution(twoAreaRoundTripStage),
+  "two-area-round-trip: knownSolution replay must remain deterministic");
+assert.deepEqual(roundTripResults[6].state.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 3 },
+  "two-area-round-trip: Guard A must enter the first transition hole");
+assert.deepEqual(roundTripResults[13].state.player, { x: 11, y: 8 });
+assert.deepEqual(roundTripResults[13].state.guards, [{ x: 5, y: 6 }, { x: 7, y: 8 }],
+  "two-area-round-trip: turn 14 Guard A has drifted while Guard B pursues");
+assert.deepEqual(roundTripResults[13].state.gold, [],
+  "two-area-round-trip: turn 14 must collect Gold");
+assert.deepEqual(roundTripResults[17].state.guards, [{ x: 5, y: 8 }, { x: 10, y: 9 }]);
+assert.deepEqual(roundTripResults[17].state.holes[0].trap,
+  { guardIndex: 1, phase: "trapped", remaining: 3 },
+  "two-area-round-trip: turn 18 must trap Guard B");
+assert.deepEqual(roundTripResults[19].state.player, { x: 9, y: 8 });
+assert.deepEqual(roundTripResults[19].state.guards, [{ x: 7, y: 8 }, { x: 10, y: 9 }],
+  "two-area-round-trip: turn 20 positions both Guards for the pincer");
+assert.deepEqual(roundTripResults[20].state.player, { x: 9, y: 7 },
+  "two-area-round-trip: turn 21 uses the x9 ladder to leave the pincer");
+assert.deepEqual(roundTripResults[26].state.player, { x: 9, y: 1 });
+assert.deepEqual(roundTripResults[31].state.player, { x: 4, y: 1 },
+  "two-area-round-trip: upper rope route reaches x4");
+assert.deepEqual(roundTripResults[32].state.player, { x: 4, y: 2 },
+  "two-area-round-trip: DOWN releases Player from the rope");
+assert.deepEqual(roundTripResults[34].state.player, { x: 4, y: 4 },
+  "two-area-round-trip: gravity WAITs reach Goal");
+
+let skipGuardBState = createSampleState(twoAreaRoundTripStage);
+for (const action of twoAreaRoundTripStage.knownSolution.slice(0, 14).concat([Action.LEFT, Action.LEFT])) {
+  const result = step(skipGuardBState, action);
+  assert.equal(result.kind, "accepted", "two-area-round-trip: direct return actions are accepted");
+  skipGuardBState = result.state;
+  if (skipGuardBState.status === "lost") break;
+}
+assert.equal(skipGuardBState.status, "lost",
+  "two-area-round-trip: returning after Gold without trapping Guard B must lose");
+assert.deepEqual(skipGuardBState.player, { x: 9, y: 8 });
+assert.deepEqual(skipGuardBState.guards[1], { x: 9, y: 8 });
+
+let ignoreGuardAState = roundTripResults[19].state;
+const wrongRoute = step(ignoreGuardAState, Action.LEFT);
+assert.equal(wrongRoute.kind, "accepted");
+assert.equal(wrongRoute.state.status, "lost",
+  "two-area-round-trip: lower return after trapping Guard B must lose to Guard A");
+assert.deepEqual(wrongRoute.state.player, { x: 8, y: 8 });
+assert.deepEqual(wrongRoute.state.guards[0], { x: 8, y: 8 });
 assert.deepEqual(integratedRouteStage.gold, [{ x: 5, y: 6 }]);
 assert.deepEqual(integratedRouteStage.tiles, [
   "#############",
