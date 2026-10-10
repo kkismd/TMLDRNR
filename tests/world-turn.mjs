@@ -19,9 +19,11 @@ function check(before, action, kind, player, guard, direction, decisionKind,
   assert.equal(result.state.turn, before.turn + (kind === "rejected" ? 0 : 1));
   assert.equal(result.guardPhase, kind !== "rejected");
   assert.equal(result.guardOutcome, kind === "rejected" ? null :
-    decisionKind === "forced" ? "forced" : decisionKind === "stay" ? "stay" : "move");
+    decisionKind === "gravity" ? "gravity" : decisionKind === "blocked" ? "blocked" :
+      decisionKind === "stay" ? "stay" : decisionKind ? "move" : null);
   assert.equal(result.guardDecision?.direction ?? null, direction);
-  assert.equal(result.guardDecision?.kind ?? null, decisionKind);
+  assert.equal(result.guardDecision?.kind ?? null,
+    decisionKind === "gravity" || decisionKind === "blocked" ? null : decisionKind);
   return result;
 }
 
@@ -111,7 +113,7 @@ for (const [outcome, x] of [["move", 6], ["move", 5], ["skip", 5], ["move", 4]])
 const fallingGuard = game(["#########", "#       #", "###   ###", "#########"],
   { x: 2, y: 1 }, { x: 4, y: 1 });
 check(fallingGuard, Action.WAIT, "accepted", { x: 2, y: 1 },
-  { x: 4, y: 2 }, "down", "forced");
+  { x: 4, y: 2 }, null, "gravity");
 
 // Planning follows the base floor across a hole; horizontal movement resolves gravity now.
 const guardLuredAcrossHole = {
@@ -147,9 +149,12 @@ assert.deepEqual(collisionAfterFall.state.guards[0], { x: 4, y: 2 });
 const unsupportedAtStart = game(
   ["#########", "#       #", "###   ###", "###   ###", "#########"],
   { x: 2, y: 1 }, { x: 4, y: 2 });
-const forcedOnly = step(unsupportedAtStart, Action.WAIT);
-assert.deepEqual(forcedOnly.state.guards[0], { x: 4, y: 3 });
-assert.deepEqual(forcedOnly.guardDecision, { direction: "down", kind: "forced" });
+const gravityAtStart = step(unsupportedAtStart, Action.WAIT);
+assert.deepEqual(gravityAtStart.state.guards[0], { x: 4, y: 3 });
+assert.equal(gravityAtStart.guardOutcome, "gravity");
+assert.equal(gravityAtStart.guardDecision, null);
+assert.deepEqual(gravityAtStart.guardResults[0],
+  { guardIndex: 0, outcome: "gravity", decision: null });
 
 const guardBelowBoard = game(["#####", "#   #", "##  #"],
   { x: 1, y: 1 }, { x: 2, y: 2 });
@@ -186,7 +191,7 @@ assert.deepEqual(step(structuredClone(blockedAttachedGravity), Action.WAIT),
 const longGuardFall = game(["#########", "#       #", "###   ###", "###   ###", "#########"],
   { x: 2, y: 1 }, { x: 4, y: 1 });
 const guardFallOne = check({ ...longGuardFall, turn: 1 }, Action.WAIT, "accepted",
-  { x: 2, y: 1 }, { x: 4, y: 3 }, "down", "forced", GuardCadence.EVERY_OTHER);
+  { x: 2, y: 1 }, { x: 4, y: 3 }, null, "gravity", GuardCadence.EVERY_OTHER);
 const guardFallTwo = step(guardFallOne.state, Action.WAIT, GuardCadence.EVERY_OTHER);
 assert.deepEqual(guardFallTwo.state.guards[0], { x: 4, y: 3 });
 assert.equal(guardFallTwo.guardOutcome, "stay");
@@ -198,7 +203,7 @@ const twoGuardFall = {
 };
 const countFallOne = step(twoGuardFall, Action.WAIT, GuardCadence.BY_GUARD_COUNT);
 assert.equal(countFallOne.state.turn, 2); // A supported Guard would skip this turn.
-assert.deepEqual(countFallOne.guardResults.map(({ outcome }) => outcome), ["forced", "skip"]);
+assert.deepEqual(countFallOne.guardResults.map(({ outcome }) => outcome), ["gravity", "skip"]);
 assert.deepEqual(countFallOne.state.guards, [{ x: 4, y: 3 }, { x: 6, y: 1 }]);
 assert.deepEqual(step(structuredClone(twoGuardFall), Action.WAIT, GuardCadence.BY_GUARD_COUNT),
   countFallOne);
@@ -209,12 +214,12 @@ assert.deepEqual(countFallTwo.state.guards, [{ x: 4, y: 3 }, { x: 5, y: 3 }]);
 const fallingPlayer = game(["#########", "#       #", "##      #", "##      #", "#########"],
   { x: 1, y: 1 }, { x: 5, y: 1 });
 const fallOne = check(fallingPlayer, Action.RIGHT, "accepted", { x: 2, y: 3 },
-  { x: 5, y: 3 }, "down", "forced");
+  { x: 5, y: 3 }, null, "gravity");
 const fallTwo = step(fallOne.state, Action.RIGHT);
 assert.equal(fallTwo.kind, "accepted");
 assert.equal(fallTwo.state.turn, fallingPlayer.turn + 2);
 assert.deepEqual(fallTwo.state.player, { x: 3, y: 3 });
-assert.notEqual(fallTwo.kind, "forced");
+assert.equal(fallTwo.kind, "accepted");
 
 const actions = [Action.LEFT, Action.RIGHT, Action.WAIT, Action.RIGHT];
 function run(initial, cadence = GuardCadence.EVERY_TURN) {
@@ -274,7 +279,8 @@ const stacked = {
 const blockedFall = step(stacked, Action.WAIT, GuardCadence.EVERY_OTHER);
 assert.deepEqual(blockedFall.state.guards, stacked.guards);
 assert.deepEqual(blockedFall.guardResults.map(({ outcome }) => outcome), ["blocked", "skip"]);
-assert.equal(blockedFall.guardResults[0].decision.kind, "forced");
+assert.equal(blockedFall.guardResults[0].outcome, "blocked");
+assert.equal(blockedFall.guardResults[0].decision, null);
 const retriedFall = step(blockedFall.state, Action.WAIT, GuardCadence.EVERY_OTHER);
 assert.equal(retriedFall.guardResults[0].outcome, "blocked");
 
@@ -285,7 +291,7 @@ const mixedCadence = {
   guards: [{ x: 1, y: 1 }, { x: 4, y: 1 }],
 };
 const mixedSkip = step(mixedCadence, Action.WAIT, GuardCadence.EVERY_OTHER);
-assert.deepEqual(mixedSkip.guardResults.map(({ outcome }) => outcome), ["skip", "forced"]);
+assert.deepEqual(mixedSkip.guardResults.map(({ outcome }) => outcome), ["skip", "gravity"]);
 
 const occupiedLadder = game(["### ###", "###H###", "###H###", "#######"],
   { x: 3, y: 0 }, { x: 3, y: 2 });
@@ -374,7 +380,8 @@ const guardFallContact = createSampleState({
 });
 const guardFallDeath = step(guardFallContact, Action.WAIT);
 assert.equal(guardFallDeath.state.status, "lost");
-assert.equal(guardFallDeath.guardResults[0].outcome, "forced");
+assert.equal(guardFallDeath.guardResults[0].outcome, "gravity");
+assert.equal(guardFallDeath.guardResults[0].decision, null);
 assert.deepEqual(guardFallDeath.defeat, { phase: "guard", guardIndex: 0 });
 assert.deepEqual(guardFallDeath.state.guards[1], guardFallContact.guards[1]);
 

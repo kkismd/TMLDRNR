@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
-import { stepPlayer as step } from "../src/core/player-step.js";
+import { applyPlayerAction } from "../src/core/player-step.js";
 import { isSupported } from "../src/core/terrain.js";
 
 function state(rows, player) {
-  return createSampleState({ tiles: rows, player, guards: [{ x: 1, y: 1 }] });
+  return createSampleState({ tiles: rows, player, guards: [] });
 }
 
 function position(result) {
@@ -14,70 +14,37 @@ function position(result) {
 
 const floor = ["#######", "#     #", "#######"];
 let game = state(floor, { x: 2, y: 1 });
-assert.deepEqual(position(step(game, Action.LEFT)), [1, 1, 1, "accepted"]);
-assert.deepEqual(position(step(game, Action.RIGHT)), [3, 1, 1, "accepted"]);
-const wallResult = step(game, Action.LEFT);
-assert.deepEqual(position(step(wallResult.state, Action.LEFT)), [1, 1, 1, "rejected"]);
-assert.equal(wallResult.state.turn, 1);
-assert.deepEqual(position(step(game, Action.WAIT)), [2, 1, 1, "accepted"]);
+assert.deepEqual(position(applyPlayerAction(game, Action.LEFT)), [1, 1, 0, "accepted"]);
+assert.deepEqual(position(applyPlayerAction(game, Action.RIGHT)), [3, 1, 0, "accepted"]);
+assert.deepEqual(position(applyPlayerAction(game, Action.WAIT)), [2, 1, 0, "accepted"]);
+assert.deepEqual(position(applyPlayerAction(game, "invalid")), [2, 1, 0, "rejected"]);
+assert.strictEqual(applyPlayerAction(game, "invalid").state, game);
 
 const ladder = ["#######", "#  H  #", "#  H  #", "#     #", "#######"];
 game = state(ladder, { x: 3, y: 2 });
-assert.deepEqual(position(step(game, Action.UP)), [3, 1, 1, "accepted"]);
-assert.deepEqual(position(step(game, Action.DOWN)), [3, 3, 1, "accepted"]);
+assert.deepEqual(position(applyPlayerAction(game, Action.UP)), [3, 1, 0, "accepted"]);
+assert.deepEqual(position(applyPlayerAction(game, Action.DOWN)), [3, 3, 0, "accepted"]);
 
-const ladderTop = ["#######", "#     #", "###H###", "#  H  #", "#######"];
-game = state(ladderTop, { x: 3, y: 2 });
-const climbed = step(game, Action.UP);
-assert.deepEqual(position(climbed), [3, 1, 1, "accepted"]);
-assert.equal(isSupported(climbed.state), true);
-assert.deepEqual(position(step(climbed.state, Action.WAIT)), [3, 1, 2, "accepted"]);
-const supportedExit = step(climbed.state, Action.RIGHT);
-assert.deepEqual(position(supportedExit), [4, 1, 2, "accepted"]);
-assert.equal(isSupported(supportedExit.state), true);
-assert.deepEqual(position(step(supportedExit.state, Action.WAIT)), [4, 1, 3, "accepted"]);
-
-game = state(["#######", "#     #", "#  H  #", "#  H  #", "#######"], { x: 3, y: 1 });
+game = state(["#######", "#  H  #", "#     #", "#     #", "#######"], { x: 3, y: 1 });
 assert.equal(isSupported(game), true);
-assert.deepEqual(position(step(game, Action.WAIT)), [3, 1, 1, "accepted"]);
-const unsupportedExit = step(game, Action.RIGHT);
-assert.deepEqual(position(unsupportedExit), [4, 1, 1, "accepted"]);
+const unsupportedExit = applyPlayerAction(game, Action.RIGHT);
+assert.deepEqual(position(unsupportedExit), [4, 1, 0, "accepted"]);
 assert.equal(isSupported(unsupportedExit.state), false);
-assert.deepEqual(position(step(unsupportedExit.state, Action.LEFT)), [4, 2, 2, "forced"]);
+assert.throws(() => applyPlayerAction(unsupportedExit.state, Action.LEFT), /supported position/);
 
 game = state(["HHHHH", "HHHHH", "HHHHH", "HHHHH"], { x: 2, y: 2 });
 for (const [action, expected] of [
-  [Action.LEFT, [1, 2, 1, "accepted"]],
-  [Action.RIGHT, [3, 2, 1, "accepted"]],
-  [Action.UP, [2, 1, 1, "accepted"]],
-  [Action.DOWN, [2, 3, 1, "accepted"]],
-]) {
-  assert.deepEqual(position(step(game, action)), expected);
-}
+  [Action.LEFT, [1, 2, 0, "accepted"]],
+  [Action.RIGHT, [3, 2, 0, "accepted"]],
+  [Action.UP, [2, 1, 0, "accepted"]],
+  [Action.DOWN, [2, 3, 0, "accepted"]],
+]) assert.deepEqual(position(applyPlayerAction(game, action)), expected);
 
-game = state(["#######", "#  H  #", "#     #", "#     #", "#######"], { x: 3, y: 1 });
-const sideExit = step(game, Action.RIGHT);
-assert.deepEqual(position(sideExit), [4, 1, 1, "accepted"]);
-assert.equal(isSupported(sideExit.state), false);
-assert.deepEqual(position(step(sideExit.state, Action.LEFT)), [4, 2, 2, "forced"]);
+const dig = state(["#######", "#     #", "#######", "#######"], { x: 3, y: 1 });
+assert.deepEqual(applyPlayerAction(dig, Action.DIG_LEFT).pendingDig, { x: 2, y: 2 });
+assert.equal(applyPlayerAction(dig, Action.DIG_LEFT).state.turn, dig.turn);
 
-const rope = ["#######", "#     #", "# --- #", "#     #", "#     #", "#######"];
-game = state(rope, { x: 3, y: 2 });
-assert.deepEqual(position(step(game, Action.LEFT)), [2, 2, 1, "accepted"]);
-const ropeDetach = step(game, Action.DOWN);
-assert.deepEqual(position(ropeDetach), [3, 3, 1, "accepted"]);
-assert.equal(isSupported(ropeDetach.state), false);
-assert.deepEqual(position(step(ropeDetach.state, Action.RIGHT)), [3, 4, 2, "forced"]);
-
-game = state(["#######", "#     #", "#     #", "#     #", "#######"], { x: 2, y: 1 });
-assert.equal(isSupported(game), false);
-assert.deepEqual(position(step(game, Action.RIGHT)), [2, 2, 1, "forced"]);
-const fallTwo = step(step(game, Action.WAIT).state, Action.WAIT);
-assert.deepEqual(position(fallTwo), [2, 3, 2, "forced"]);
-assert.deepEqual(position(step(fallTwo.state, Action.WAIT)), [2, 3, 3, "accepted"]);
-
-const first = step(game, Action.LEFT);
-const second = step(structuredClone(game), Action.LEFT);
-assert.deepEqual(first, second);
-assert.deepEqual(game.player, { x: 2, y: 1 });
-console.log("Core movement regression cases passed.");
+assert.deepEqual(applyPlayerAction(game, Action.WAIT),
+  applyPlayerAction(structuredClone(game), Action.WAIT));
+assert.deepEqual(game.player, { x: 2, y: 2 });
+console.log("Player action regression cases passed.");

@@ -5,16 +5,8 @@ const ladderTile = "H";
 const ropeTile = "-";
 const validActions = new Set(Object.values(Action));
 
-function movedState(state, x, y) {
-  return {
-    ...state,
-    player: { x, y },
-    turn: state.turn + 1,
-  };
-}
-
 function accepted(state, x = state.player.x, y = state.player.y) {
-  return { state: movedState(state, x, y), kind: "accepted" };
+  return { state: { ...state, player: { x, y } }, kind: "accepted" };
 }
 
 function rejected(state) {
@@ -34,17 +26,13 @@ export function isPlayerSupported(state) {
   });
 }
 
-// Player phase only; the world-turn entry point remains step().
-export function stepPlayer(state, action) {
+// Applies Player intent only; world physics and turn progression belong to step().
+export function applyPlayerAction(state, action) {
+  if (!isPlayerSupported(state)) {
+    throw new Error("Invalid game state: Player action requires a settled, supported position.");
+  }
   const { x, y } = state.player;
   const below = tileAt(state, x, y + 1);
-
-  if (!isPlayerSupported(state)) {
-    if (!isTraversable(state, x, y + 1)) {
-      throw new Error("Invalid game state: unsupported player cannot fall into the board below.");
-    }
-    return { state: movedState(state, x, y + 1), kind: "forced" };
-  }
 
   if (!validActions.has(action)) return rejected(state);
 

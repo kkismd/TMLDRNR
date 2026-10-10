@@ -1,5 +1,5 @@
 import { decideGuardMove } from "./guard-ai.js";
-import { isPlayerSupported, stepPlayer } from "./player-step.js";
+import { applyPlayerAction, isPlayerSupported } from "./player-step.js";
 import { isSupported, isTraversable, tileAt } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
@@ -162,36 +162,38 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     throw new Error("Invalid game state: Player input requires a settled, supported position.");
   }
 
-  const playerResult = stepPlayer(state, action);
+  const playerResult = applyPlayerAction(state, action);
   if (playerResult.kind === "rejected") {
     return { ...playerResult, guardPhase: false, guardResults: [], guardOutcome: null,
       guardDecision: null, defeat: null, clear: null };
   }
 
-  let current = playerResult.state;
+  const acceptedState = { ...playerResult.state, turn: state.turn + 1 };
+  const acceptedResult = { ...playerResult, state: acceptedState };
+  let current = acceptedState;
   let checked = checkPlayerCell(current, "player");
   current = checked.state;
   if (checked.defeat || checked.clear) {
-    return { ...playerResult, ...checked, guardPhase: false, guardResults: [],
+    return { ...acceptedResult, ...checked, guardPhase: false, guardResults: [],
       guardOutcome: null, guardDecision: null };
   }
   checked = settlePlayer(current, "player");
   current = checked.state;
   if (checked.defeat || checked.clear) {
-    return { ...playerResult, ...checked, guardPhase: false, guardResults: [],
+    return { ...acceptedResult, ...checked, guardPhase: false, guardResults: [],
       guardOutcome: null, guardDecision: null };
   }
 
   const advanced = advanceHoles(current);
   current = advanced.state;
   if (advanced.escapedCollision) {
-    return { ...playerResult, state: { ...current, status: "lost" },
+    return { ...acceptedResult, state: { ...current, status: "lost" },
       defeat: advanced.escapedCollision, clear: null, guardPhase: false,
       guardResults: [], guardOutcome: null, guardDecision: null };
   }
   if (advanced.restoringPlayer) {
     const lost = defeat(current, "hole-restoration", null);
-    return { ...playerResult, ...lost, clear: null, guardPhase: false,
+    return { ...acceptedResult, ...lost, clear: null, guardPhase: false,
       guardResults: [], guardOutcome: null, guardDecision: null };
   }
 
@@ -219,8 +221,8 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
         current = settled.state;
         defeatMetadata = settled.defeat;
       }
-      guardResults.push({ guardIndex, outcome: settled.blocked ? "blocked" : "forced",
-        decision: { direction: "down", kind: "forced" } });
+      guardResults.push({ guardIndex, outcome: settled.blocked ? "blocked" : "gravity",
+        decision: null });
       if (defeatMetadata) break;
       continue;
     }
@@ -255,7 +257,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
         defeatMetadata = settled.defeat;
       }
     }
-    guardResults.push({ guardIndex, outcome: decision.kind === "forced" ? "forced" : "move", decision });
+    guardResults.push({ guardIndex, outcome: "move", decision });
     if (defeatMetadata) break;
   }
 
@@ -282,7 +284,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
     }
   }
 
-  const result = { ...playerResult, state: current, guardPhase: true, guardResults,
+  const result = { ...acceptedResult, state: current, guardPhase: true, guardResults,
     defeat: defeatMetadata, clear: checked?.clear ?? null };
   if (guardCount === 1) {
     result.guardOutcome = guardResults[0]?.outcome ?? null;

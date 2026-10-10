@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { decideGuardMove, stepGuard } from "../src/core/guard-ai.js";
+import { decideGuardMove } from "../src/core/guard-ai.js";
 import { isSupported } from "../src/core/terrain.js";
 
 function map(rows) {
@@ -23,15 +23,7 @@ function check(rows, direction, kind, candidate) {
   if (candidate) {
     assert.deepEqual(decision.candidate, candidate);
   }
-  const result = stepGuard(state, 0);
-  assert.deepEqual(result.decision, decision);
-  assert.equal(Math.abs(result.state.guards[0].x - state.guards[0].x) +
-    Math.abs(result.state.guards[0].y - state.guards[0].y), direction === "stay" ? 0 : 1);
-  assert.equal(result.state.turn, 7);
-  assert.deepEqual(result.state.player, state.player);
-  assert.deepEqual(result.state.tiles, state.tiles);
-  assert.deepEqual(state.guards, [state.guards[0]]);
-  return { state, decision, result };
+  return { state, decision };
 }
 
 // Same-row chase takes precedence over vertical candidates and works both ways.
@@ -56,8 +48,8 @@ check(["#########", "#P G    #", "###H#####", "#  H    #", "#########"], "left",
 check(["# P     #", "# H     #", "# H G   #", "###H#####"],
   "left", "candidate", { x: 2, y: 0, connection: "up", score: [0, 2] });
 
-const falling = check(["#######", "#P    #", "#  G  #", "#     #", "#######"], "down", "forced");
-assert.deepEqual(falling.result.state.guards[0], { x: 3, y: 3 });
+const unsupported = map(["#######", "#P    #", "#  G  #", "#     #", "#######"]);
+assert.throws(() => decideGuardMove(unsupported, 0), /supported position/);
 
 // Current-column connections use their exit row to score, then move one cell.
 check(["#######", "#P    #", "#     #", "#  G  #", "#  H  #", "#######"],
@@ -72,9 +64,8 @@ check(["#########", "#      P#", "#     H #", "#   G H #", "#########"],
   "right", "candidate", { x: 6, y: 1, connection: "up", score: [0, 2] });
 
 // The first unsupported side cell is evaluated as a fall point, but reach stops there.
-const fallPoint = check(["########", "#P     #", "#  G   #", "#####  #", "#      #", "########"],
+check(["########", "#P     #", "#  G   #", "#####  #", "#      #", "########"],
   "right", "candidate", { x: 5, y: 4, connection: "down", score: [2, 3] });
-assert.deepEqual(fallPoint.result.state.guards[0], { x: 4, y: 2 });
 check(["#P     #", "#     H#", "#  G  H#", "#####  #", "#      #", "########"],
   "right", "candidate", { x: 5, y: 4, connection: "down", score: [2, 4] });
 
@@ -111,7 +102,6 @@ check(["#######", "#P#G  #", "#######"], "stay", "stay");
 
 const original = map(["#########", "#P      #", "# H     #", "# H G   #", "#########"]);
 assert.deepEqual(decideGuardMove(original, 0), decideGuardMove(structuredClone(original), 0));
-assert.deepEqual(stepGuard(original, 0), stepGuard(structuredClone(original), 0));
 assert.deepEqual(original.guards, [{ x: 4, y: 3 }]);
 
 // A hole overlay cannot alter ladder / fall candidate planning when actual support is unchanged.
@@ -125,6 +115,4 @@ for (let y = 0; y < original.height; y += 1) {
   }
 }
 assert.throws(() => decideGuardMove(original, 1), RangeError);
-const twoGuards = { ...original, guards: [original.guards[0], { x: 7, y: 3 }] };
-assert.deepEqual(stepGuard(twoGuards, 0).state.guards[1], { x: 7, y: 3 });
 console.log("Guard AI regression cases passed.");

@@ -12,7 +12,7 @@ export function createSession(stage) {
     play(action) {
       const previous = state;
       const result = step(state, action);
-      if (result.kind === "accepted" || result.kind === "forced") {
+      if (result.kind === "accepted") {
         history.push(previous);
       }
       state = result.state;

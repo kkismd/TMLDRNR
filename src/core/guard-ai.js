@@ -65,10 +65,7 @@ export function decideGuardMove(state, guardIndex) {
   if (!guard) throw new RangeError(`Invalid guard index: ${guardIndex}`);
 
   if (!isSupported(state, guard)) {
-    if (!isTraversable(state, guard.x, guard.y + 1)) {
-      throw new Error("Invalid game state: unsupported guard cannot fall into the board below.");
-    }
-    return { direction: "down", kind: "forced" };
+    throw new Error("Invalid game state: Guard planning requires a supported position.");
   }
 
   if (guard.x === state.player.x && guard.y === state.player.y) {
@@ -100,17 +97,4 @@ export function decideGuardMove(state, guardIndex) {
   if (!best) return { direction: "stay", kind: "stay" };
   const direction = best.x < guard.x ? "left" : best.x > guard.x ? "right" : best.connection;
   return { direction, kind: "candidate", candidate: best };
-}
-
-export function stepGuard(state, guardIndex) {
-  const decision = decideGuardMove(state, guardIndex);
-  const guard = state.guards[guardIndex];
-  const delta = {
-    left: { x: -1, y: 0 }, right: { x: 1, y: 0 },
-    up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, stay: { x: 0, y: 0 },
-  }[decision.direction];
-  const guards = state.guards.map((position, index) => index === guardIndex
-    ? { x: guard.x + delta.x, y: guard.y + delta.y }
-    : position);
-  return { state: { ...state, guards }, decision };
 }

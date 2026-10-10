@@ -18,7 +18,7 @@ const buttonActions = {
   "dig-right": Action.DIG_RIGHT,
 };
 
-export function bindInput(controls, onAction, onContinue = onAction, onCommand = () => {}) {
+export function bindInput(controls, onAction, onCommand = () => {}) {
   document.addEventListener("keydown", (event) => {
     if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
     const action = keyActions[event.code];
@@ -34,11 +34,6 @@ export function bindInput(controls, onAction, onContinue = onAction, onCommand =
 
     if (button.dataset.command) {
       onCommand(button.dataset.command);
-      return;
-    }
-
-    if (button.dataset.action === "continue") {
-      onContinue();
       return;
     }
 
