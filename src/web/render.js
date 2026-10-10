@@ -1,3 +1,5 @@
+import { isPlayerSupported } from "../core/step.js";
+
 const tileAppearance = {
   "#": ["wall", "■"],
   "H": ["ladder", "▤"],
@@ -5,6 +7,12 @@ const tileAppearance = {
   "E": ["goal", "▣"],
   " ": ["empty", ""],
 };
+
+export function getStatusLabel(state) {
+  if (state.status === "lost") return "LOST";
+  if (state.status === "won") return "CLEAR";
+  return isPlayerSupported(state) ? "READY" : "FALL";
+}
 
 export function renderBoard(element, state) {
   const cells = document.createDocumentFragment();

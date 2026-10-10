@@ -1,6 +1,6 @@
 import { stages } from "./stages.js";
 import { bindInput } from "./web/input.js";
-import { renderBoard } from "./web/render.js";
+import { getStatusLabel, renderBoard } from "./web/render.js";
 import { createSession } from "./web/session.js";
 
 let selectedStage = stages[0];
@@ -24,8 +24,7 @@ function render() {
   const state = session.state;
   renderBoard(board, state);
   turnOutput.value = String(state.turn);
-  statusOutput.value = state.status === "lost" ? "LOST" :
-    state.status === "won" ? "CLEAR" : "READY";
+  statusOutput.value = getStatusLabel(state);
   undoButton.disabled = session.historyLength === 0;
 }
 

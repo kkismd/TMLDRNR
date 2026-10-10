@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createSampleState } from "../src/core/state.js";
-import { renderBoard } from "../src/web/render.js";
+import { getStatusLabel, renderBoard } from "../src/web/render.js";
 
 function installDocument() {
   globalThis.document = {
@@ -39,6 +39,14 @@ assert.ok(guardOnGold.className.includes("tile--has-gold"));
 assert.equal(guardOnGold.textContent, "◆");
 
 const activeState = createSampleState({ ...stage, gold: [] });
+assert.equal(getStatusLabel(activeState), "READY");
+assert.equal(getStatusLabel({
+  ...activeState,
+  tiles: [...activeState.tiles.slice(0, 2), "#   #"],
+  player: { x: 2, y: 1 },
+}), "FALL");
+assert.equal(getStatusLabel({ ...activeState, status: "lost" }), "LOST");
+assert.equal(getStatusLabel({ ...activeState, status: "won" }), "CLEAR");
 renderBoard(board, activeState);
 assert.ok(board.children.some(({ className }) => className.includes("tile--goal-active")));
 assert.ok(!board.children.some(({ className }) => className === "tile tile--gold"));
