@@ -124,11 +124,22 @@ assert.deepEqual(bottomGuardTrap.state.holes[0].trap,
   { guardIndex: 0, phase: "trapped", remaining: 3 });
 assert.equal(isSupported(bottomGuardTrap.state, bottomGuardTrap.state.guards[0]), true);
 let bottomGuardLifecycle = bottomGuardTrap.state;
-while (bottomGuardLifecycle.holes[0]?.trap) {
+while (bottomGuardLifecycle.holes[0]?.trap.phase !== "climbing") {
   bottomGuardLifecycle = step(bottomGuardLifecycle, Action.WAIT).state;
 }
-assert.deepEqual(bottomGuardLifecycle.guards[0], { x: 2, y: 2 });
-assert.deepEqual(bottomGuardLifecycle.holes, []);
+const blockedBottomEscape = step({
+  ...bottomGuardLifecycle,
+  guards: [...bottomGuardLifecycle.guards, { x: 2, y: 2 }],
+}, Action.WAIT, GuardCadence.EVERY_OTHER);
+assert.deepEqual(blockedBottomEscape.state.holes[0].trap,
+  { guardIndex: 0, phase: "climbing" });
+assert.deepEqual(blockedBottomEscape.state.guards[0], { x: 2, y: 3 });
+const retriedBottomEscape = step({
+  ...blockedBottomEscape.state,
+  guards: blockedBottomEscape.state.guards.slice(0, 1),
+}, Action.WAIT);
+assert.deepEqual(retriedBottomEscape.state.guards[0], { x: 2, y: 2 });
+assert.deepEqual(retriedBottomEscape.state.holes, []);
 
 const alreadyOpen = { ...rightHole, holes: [{ x: 3, y: 2, remaining: 3 }] };
 assert.equal(step(alreadyOpen, Action.DIG_RIGHT).kind, "rejected");
