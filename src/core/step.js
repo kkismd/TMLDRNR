@@ -1,7 +1,7 @@
 import { decideGuardMove } from "./guard-ai.js";
 import { Action } from "./actions.js";
 import { applyPlayerAction, isPlayerSupported } from "./player-step.js";
-import { isSupported, isTraversable, tileAt } from "./terrain.js";
+import { isGuardSupported, isSupported, isTraversable, tileAt } from "./terrain.js";
 
 export { tileAt, isSupported } from "./terrain.js";
 export { isPlayerSupported };
@@ -207,7 +207,7 @@ export function step(state, action, cadence = GuardCadence.EVERY_TURN) {
 
     let guard = current.guards[guardIndex];
     let decision = null;
-    if (!isSupported(current, guard)) {
+    if (!isGuardSupported(current, guardIndex)) {
       const advancedGuard = advanceGuardGravity(current, guardIndex);
       current = advancedGuard.state;
       if (advancedGuard.defeat) defeatMetadata = advancedGuard.defeat;
