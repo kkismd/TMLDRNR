@@ -16,6 +16,8 @@ export function isTraversable(state, x, y) {
 
 export function isSupported(state, position = state.player) {
   const tile = tileAt(state, position.x, position.y);
+  if (tile === undefined) return false;
+  if (position.y === state.height - 1) return tile !== "#";
   const below = tileAt(state, position.x, position.y + 1);
   return tile === "H" || tile === "-" || below === "#" || below === "H";
 }

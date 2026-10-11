@@ -158,10 +158,12 @@ assert.equal(gravityAtStart.guardDecision, null);
 assert.deepEqual(gravityAtStart.guardResults[0],
   { guardIndex: 0, outcome: "gravity", decision: null });
 
-const guardBelowBoard = game(["#####", "#   #", "##  #"],
+const bottomGuard = game(["#####", "#   #", "##  #"],
   { x: 1, y: 1 }, { x: 2, y: 2 });
-assert.throws(() => step(guardBelowBoard, Action.WAIT),
-  /Invalid game state: unsupported guard cannot fall into the board below/);
+assert.equal(isSupported(bottomGuard, bottomGuard.guards[0]), true);
+const bottomGuardWait = step(bottomGuard, Action.WAIT);
+assert.deepEqual(bottomGuardWait.state.guards[0], { x: 2, y: 2 });
+assert.equal(isSupported(bottomGuardWait.state, bottomGuardWait.state.guards[0]), true);
 
 // Cadence skips supported movement; it cannot trigger attached gravity.
 const cadenceSkipHole = {

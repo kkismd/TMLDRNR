@@ -81,9 +81,9 @@ check(["#########", "# H     #", "# H    P#", "# H G   #", "#####  ##", "#######
 check(["#########", "#       #", "# H     #", "# H     #", "# H G H #", "#########", "#   P   #"],
   "right", "candidate", { x: 6, y: 3, connection: "up", score: [1, 3] });
 
-// At one side position, down is considered before up; the score still decides.
+// Bottom-row support makes the lower connection a same-row chase candidate.
 check(["#########", "#       #", "# H     #", "# H G   #", "# H######", "# P     #"],
-  "left", "candidate", { x: 2, y: 4, connection: "down", score: [1, 1] });
+  "left", "candidate", { x: 1, y: 5, connection: "down", score: [0, 3] });
 
 // Equal scores keep the earlier candidate: current column before a side column.
 check(["#########", "#       #", "# H H   #", "# H g   #", "#########", "#   P   #"],

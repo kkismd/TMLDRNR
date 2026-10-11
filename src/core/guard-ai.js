@@ -7,6 +7,8 @@ function isBaseTraversable(state, x, y) {
 
 function isBaseSupported(state, position) {
   const tile = baseTileAt(state, position.x, position.y);
+  if (tile === undefined) return false;
+  if (position.y === state.height - 1) return tile !== "#";
   const below = baseTileAt(state, position.x, position.y + 1);
   return tile === "H" || tile === "-" || below === "#" || below === "H";
 }
