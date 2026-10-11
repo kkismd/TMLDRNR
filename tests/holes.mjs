@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { GuardCadence, HOLE_LIFETIME_TURNS, step } from "../src/core/step.js";
-import { isSupported, isTraversable, tileAt } from "../src/core/terrain.js";
+import { baseTileAt, isSupported, isTraversable, tileAt } from "../src/core/terrain.js";
 import { createSession } from "../src/web/session.js";
 
 const tiles = ["#######", "#     #", "#######", "#######"];
@@ -65,8 +65,7 @@ for (const invalid of [
   assert.equal(result.state.turn, invalid.turn);
 }
 
-// Digging a bottom-row brick would create an unsupported hole with no in-board
-// fall destination. Reject either direction before the world turn begins.
+// Bottom-row bricks remain ordinary dig targets, supported by virtual bedrock.
 for (const [action, targetX] of [
   [Action.DIG_LEFT, 1],
   [Action.DIG_RIGHT, 3],
@@ -74,22 +73,62 @@ for (const [action, targetX] of [
   const bottomRowState = createSampleState({
     tiles: ["#######", "#     #", "#     #", "#######"],
     player: { x: 2, y: 2 },
-    guards: [{ x: 5, y: 2 }],
+    guards: [],
   });
-  const withExistingHole = {
-    ...bottomRowState,
-    holes: [{ x: 1, y: 2, remaining: 2 }],
-  };
-  const result = step(withExistingHole, action);
-  assert.equal(result.kind, "rejected");
-  assert.strictEqual(result.state, withExistingHole);
-  assert.equal(result.state.turn, withExistingHole.turn);
-  assert.equal(result.guardPhase, false);
-  assert.deepEqual(result.guardResults, []);
-  assert.deepEqual(result.state.holes, [{ x: 1, y: 2, remaining: 2 }]);
-  assert.equal(result.pendingDig, undefined);
+  const result = step(bottomRowState, action);
+  assert.equal(result.kind, "accepted");
+  assert.equal(result.state.turn, bottomRowState.turn + 1);
+  assert.deepEqual(result.state.holes, [{ x: targetX, y: 3, remaining: HOLE_LIFETIME_TURNS }]);
+  assert.equal(isSupported(result.state, { x: targetX, y: 3 }), true);
+  assert.equal(tileAt(result.state, targetX, 4), undefined);
+  assert.equal(baseTileAt(result.state, targetX, 4), undefined);
+  assert.equal(isTraversable(result.state, targetX, 4), false);
   assert.equal(result.state.tiles[3][targetX], "#");
 }
+
+const bottomHolePlayer = createSampleState({
+  tiles: ["#######", "#     #", "#     #", "#######"],
+  player: { x: 2, y: 2 }, guards: [],
+});
+const bottomOpenPlayer = createSampleState({
+  tiles: ["#######", "#     #", "#     #", "#     #"],
+  player: { x: 2, y: 3 }, guards: [],
+});
+assert.equal(isSupported(bottomOpenPlayer), true);
+assert.equal(step(bottomOpenPlayer, Action.DIG_LEFT).kind, "rejected");
+const bottomDig = step(bottomHolePlayer, Action.DIG_RIGHT);
+const ontoBottomHole = step(bottomDig.state, Action.RIGHT);
+assert.equal(isSupported(ontoBottomHole.state), false);
+const fallIntoBottomHole = step(ontoBottomHole.state, Action.WAIT);
+assert.deepEqual(fallIntoBottomHole.state.player, { x: 3, y: 3 });
+assert.equal(isSupported(fallIntoBottomHole.state), true);
+assert.equal(tileAt(fallIntoBottomHole.state, 3, 4), undefined);
+let bottomLifecycle = fallIntoBottomHole.state;
+let restoreResult;
+while (bottomLifecycle.holes.length > 0) {
+  restoreResult = step(bottomLifecycle, Action.WAIT);
+  bottomLifecycle = restoreResult.state;
+}
+assert.equal(bottomLifecycle.status, "lost");
+assert.deepEqual(restoreResult.defeat, { phase: "hole-restoration", guardIndex: null });
+
+const bottomGuardState = createSampleState({
+  tiles: ["#######", "#     #", "#     #", "#######"],
+  player: { x: 1, y: 2 }, guards: [{ x: 3, y: 2 }],
+});
+const bottomGuardDig = step(bottomGuardState, Action.DIG_RIGHT);
+assert.deepEqual(bottomGuardDig.state.guards[0], { x: 2, y: 2 });
+const bottomGuardTrap = step(bottomGuardDig.state, Action.WAIT);
+assert.deepEqual(bottomGuardTrap.state.guards[0], { x: 2, y: 3 });
+assert.deepEqual(bottomGuardTrap.state.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 3 });
+assert.equal(isSupported(bottomGuardTrap.state, bottomGuardTrap.state.guards[0]), true);
+let bottomGuardLifecycle = bottomGuardTrap.state;
+while (bottomGuardLifecycle.holes[0]?.trap) {
+  bottomGuardLifecycle = step(bottomGuardLifecycle, Action.WAIT).state;
+}
+assert.deepEqual(bottomGuardLifecycle.guards[0], { x: 2, y: 2 });
+assert.deepEqual(bottomGuardLifecycle.holes, []);
 
 const alreadyOpen = { ...rightHole, holes: [{ x: 3, y: 2, remaining: 3 }] };
 assert.equal(step(alreadyOpen, Action.DIG_RIGHT).kind, "rejected");
