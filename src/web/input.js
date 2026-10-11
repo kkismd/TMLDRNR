@@ -18,9 +18,16 @@ const buttonActions = {
   "dig-right": Action.DIG_RIGHT,
 };
 
-export function bindInput(controls, onAction, onCommand = () => {}) {
+function isEditableTarget(target) {
+  return Boolean(target?.closest?.("textarea, input, select, [contenteditable='true']"))
+    || ["TEXTAREA", "INPUT", "SELECT"].includes(target?.tagName)
+    || target?.isContentEditable === true;
+}
+
+export function bindInput(controls, onAction, onCommand = () => {}, canAct = () => true) {
   document.addEventListener("keydown", (event) => {
-    if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.repeat || event.altKey || event.ctrlKey || event.metaKey
+        || isEditableTarget(event.target) || !canAct()) return;
     const action = keyActions[event.code];
     if (!action) return;
 
@@ -38,6 +45,6 @@ export function bindInput(controls, onAction, onCommand = () => {}) {
     }
 
     const action = buttonActions[button.dataset.action];
-    if (action) onAction(action);
+    if (action && canAct()) onAction(action);
   });
 }

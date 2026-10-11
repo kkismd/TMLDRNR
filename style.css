@@ -27,6 +27,8 @@ select {
   color: inherit;
   font: inherit;
 }
+button { font: inherit; }
+section > #edit-stage { min-height: 2.25rem; margin-left: .5rem; }
 header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
 
 .board {
@@ -86,6 +88,35 @@ header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
 .restart { grid-column: 3 / 4; }
 .controls button:disabled { opacity: .5; cursor: not-allowed; }
 .controls button:disabled:hover { background: #293b47; }
+.editor-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+.editor-controls button, #edit-stage {
+  min-height: 2.5rem;
+  padding: .35rem .8rem;
+  border: 1px solid #72858d;
+  border-radius: .4rem;
+  background: #293b47;
+  color: inherit;
+  cursor: pointer;
+}
+.map-editor { margin-top: 1rem; padding: .75rem; border: 1px solid #526671; border-radius: .5rem; }
+.map-editor > label { display: block; margin-bottom: .4rem; }
+.map-editor textarea:not([hidden]) {
+  display: block;
+  width: 100%;
+  min-height: 15rem;
+  resize: vertical;
+  padding: .65rem;
+  border: 1px solid #72858d;
+  border-radius: .35rem;
+  background: #101820;
+  color: #edf3f4;
+  font: 1rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+.map-editor textarea:focus-visible { outline: 2px solid #75ddff; outline-offset: 2px; }
+.editor-error { min-height: 1.4em; color: #ff9b91; }
 .up { grid-column: 2; }
 .left { grid-column: 1; }
 .wait { grid-column: 2; }

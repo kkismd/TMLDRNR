@@ -20,8 +20,20 @@
         <label for="stage-select">Stage
           <select id="stage-select"></select>
         </label>
+        <button id="edit-stage" type="button">編集</button>
+        <section id="map-editor" class="map-editor" aria-label="マップエディタ" hidden>
+          <label for="map-text">盤面テキスト</label>
+          <textarea id="map-text" spellcheck="false" autocomplete="off" autocapitalize="off" hidden></textarea>
+          <p id="editor-error" class="editor-error" role="status" aria-live="polite"></p>
+          <div class="editor-controls">
+            <button id="playtest-map" type="button" hidden>試遊</button>
+            <button id="return-to-editor" type="button" hidden>編集に戻る</button>
+            <button id="reset-map" type="button">初期化</button>
+          </div>
+          <p class="hint">空白も1マスです。` ` 空間 / `#` レンガ / `X` 岩盤（掘削不可） / `H` 梯子 / `-` ロープ / `E` Goal / `P` Player / `G` Guard / `$` Gold</p>
+        </section>
         <div id="board" class="board" role="img" aria-label="サンプル盤面"></div>
-        <p class="legend">● Player / Gold　◆ Guard　▣ Goal　▤ 梯子　━ ロープ　■ 壁・床</p>
+        <p class="legend">● Player / Gold　◆ Guard　▣ Goal　▤ 梯子　━ ロープ　■ レンガ　▦ 岩盤（掘削不可）</p>
       </section>
 
       <section aria-labelledby="input-heading">
