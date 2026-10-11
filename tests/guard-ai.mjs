@@ -48,6 +48,9 @@ check(["#########", "#P G    #", "###H#####", "#  H    #", "#########"], "left",
 check(["# P     #", "# H     #", "# H G   #", "###H#####"],
   "left", "candidate", { x: 2, y: 0, connection: "up", score: [0, 2] });
 
+// An upper ladder does not create an ascent from an empty Guard cell.
+check(["###P###", "###H###", "###G###", "#######"], "stay", "stay");
+
 const unsupported = map(["#######", "#P    #", "#  G  #", "#     #", "#######"]);
 assert.throws(() => decideGuardMove(unsupported, 0), /supported position/);
 
@@ -55,6 +58,8 @@ assert.throws(() => decideGuardMove(unsupported, 0), /supported position/);
 check(["#######", "#P    #", "#     #", "#  G  #", "#  H  #", "#######"],
   "down", "candidate", { x: 3, y: 4, connection: "down", score: [2, 3] });
 check(["#######", "#  P  #", "#  H  #", "#  g  #", "#######"],
+  "up", "candidate", { x: 3, y: 1, connection: "up", score: [0, 0] });
+check(["#######", "#  P  #", "#  g  #", "#     #", "#######"],
   "up", "candidate", { x: 3, y: 1, connection: "up", score: [0, 0] });
 
 // Side ladder connections, including a remote candidate, move horizontally once.

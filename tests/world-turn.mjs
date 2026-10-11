@@ -71,6 +71,18 @@ const down = game(["#########", "#  H    #", "#  H    #", "#########"],
   { x: 3, y: 1 }, { x: 5, y: 2 });
 check(down, Action.DOWN, "accepted", { x: 3, y: 2 }, { x: 4, y: 2 }, "left", "chase");
 
+const ladderMove = game(["#########", "#       #", "###H#####", "### #####", "#########"],
+  { x: 4, y: 1 }, { x: 3, y: 2 });
+const climbOneCell = step(ladderMove, Action.WAIT);
+assert.equal(climbOneCell.guardDecision.direction, "up");
+assert.deepEqual(climbOneCell.state.guards[0], { x: 3, y: 1 });
+
+const ladderDownMove = game(["#########", "###H#####", "#       #", "#########"],
+  { x: 4, y: 2 }, { x: 3, y: 1 });
+const descendOneCell = step(ladderDownMove, Action.WAIT);
+assert.equal(descendOneCell.guardDecision.direction, "down");
+assert.deepEqual(descendOneCell.state.guards[0], { x: 3, y: 2 });
+
 const rope = game(["#########", "#       #", "# ----  #", "#       #", "#       #", "#########"],
   { x: 3, y: 2 }, { x: 5, y: 2 });
 check(rope, Action.LEFT, "accepted", { x: 2, y: 2 }, { x: 4, y: 2 }, "left", "chase");
