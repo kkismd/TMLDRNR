@@ -2,8 +2,13 @@ import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { step } from "../src/core/step.js";
-import { sampleStage } from "../src/stages.js";
 import { createSession } from "../src/web/session.js";
+
+const sampleStage = {
+  tiles: ["#############", "#           #", "#  H  E  H  #", "###H#####H###",
+    "#  H     H  #", "#  H     H  #", "#  H     H  #", "#  H     H  #", "#############"],
+  player: { x: 2, y: 7 }, guards: [{ x: 10, y: 7 }],
+};
 
 const session = createSession(sampleStage);
 const initial = session.state;

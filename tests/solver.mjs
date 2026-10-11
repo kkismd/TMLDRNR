@@ -4,12 +4,26 @@ import { Action } from "../src/core/actions.js";
 import { GuardCadence, step } from "../src/core/step.js";
 import { createSampleState } from "../src/core/state.js";
 import { solveStage } from "../src/solver/solve-stage.js";
-import { goldOutAndBackStage, lureFirstStage, lureIntoHoleStage, sameRowChaseStage,
-  selectorSmokeStage, waitSyncStage } from "../src/stages.js";
+import { blankStage } from "../src/stages.js";
 import { runCli } from "../scripts/solve-stage.mjs";
 
 const simpleStage = {
   tiles: ["#####", "#   E", "#####"], player: { x: 1, y: 1 }, guards: [],
+};
+const holeStage = {
+  id: "solver-hole-regression",
+  tiles: ["#############", "#############", "#############", "#############",
+    "#############", "###      E###", "#############", "#############", "#############"],
+  player: { x: 4, y: 5 }, guards: [{ x: 8, y: 5 }],
+};
+const goldStage = {
+  id: "solver-gold-regression",
+  tiles: ["#############", "#           #", "#E H  H  H  #", "###H##H##H###",
+    "###H##H##H###", "#  H  H  H  #", "#############", "#############", "#############"],
+  player: { x: 4, y: 5 }, guards: [{ x: 7, y: 5 }], gold: [{ x: 5, y: 2 }],
+  knownSolution: [Action.LEFT, Action.LEFT, Action.RIGHT, Action.UP, Action.UP, Action.UP,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.UP, Action.LEFT, Action.WAIT,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT],
 };
 
 function replay(stage, actions, cadence = GuardCadence.EVERY_TURN, observe = () => {}) {
@@ -98,18 +112,17 @@ test("turn phase is finite and follows each cadence period", () => {
 });
 
 test("multiple existing stages, including hole and Gold rules, solve and replay", () => {
-  for (const stage of [selectorSmokeStage, sameRowChaseStage, lureFirstStage, waitSyncStage,
-    lureIntoHoleStage, goldOutAndBackStage]) {
+  for (const stage of [blankStage, holeStage, goldStage]) {
     const result = solveStage(stage);
     assert.equal(result.status, "solved", stage.id);
     const history = [];
     assert.equal(replay(stage, result.actions, undefined, (state) => history.push(state)).status, "won", stage.id);
-    if (stage === lureIntoHoleStage) {
+    if (stage === holeStage) {
       assert.ok(history.some(({ holes }) => holes.some(({ remaining }) => remaining === 6)));
       assert.deepEqual(history.flatMap(({ holes }) => holes.map(({ trap }) => trap?.remaining ?? trap?.phase))
         .filter((value) => value !== undefined), [3, 2, 1, "climbing", "climbing"]);
     }
-    if (stage === goldOutAndBackStage) assert.ok(result.steps < stage.knownSolution.length);
+    if (stage === goldStage) assert.ok(result.steps < stage.knownSolution.length);
   }
 });
 
@@ -149,5 +162,15 @@ test("CLI reports parser, catalog, file, and argument errors as JSON", async () 
     const result = await invoke(args);
     assert.equal(result.status, 1);
     assert.equal(result.result.status, "error");
+  }
+  for (const stageId of ["blank", "gold-guard-reposition"]) {
+    const catalog = await invoke(["--stage", stageId, "--max-depth", "0"]);
+    assert.equal(catalog.status, 0);
+    assert.equal(catalog.result.stageId, stageId);
+  }
+  for (const obsoleteId of ["selector-smoke", "two-ladders", "gold-out-and-back"]) {
+    const obsolete = await invoke(["--stage", obsoleteId]);
+    assert.equal(obsolete.status, 1);
+    assert.equal(obsolete.result.status, "error");
   }
 });

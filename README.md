@@ -31,7 +31,7 @@ Guard の通常移動 cadence は `GuardCadence.EVERY_TURN`（1:1、Web の既�
 ## 構成
 
 - `index.html` / `style.css`: 静的な画面と最小限の見た目
-- `src/stages.js`: 表示確認用の 13×9 サンプル盤面
+- `src/stages.js`: 正式 catalog のブランクマップと Gold後Guard再配置マップ
 - `src/core/`: UI に依存しない Action、GameState、world-turn 遷移、Guard planning
 - `src/web/`: DOM 描画、keyboard / button 入力、Undo / Restart session
 - `src/main.js`: stage、state、renderer、input の接続
