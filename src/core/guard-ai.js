@@ -2,15 +2,15 @@ import { baseTileAt, isGuardSupported, isTraversable } from "./terrain.js";
 
 function isBaseTraversable(state, x, y) {
   const tile = baseTileAt(state, x, y);
-  return tile !== undefined && tile !== "#";
+  return tile !== undefined && tile !== "#" && tile !== "X";
 }
 
 function isBaseSupported(state, position) {
   const tile = baseTileAt(state, position.x, position.y);
   if (tile === undefined) return false;
-  if (position.y === state.height - 1) return tile !== "#";
+  if (position.y === state.height - 1) return tile !== "#" && tile !== "X";
   const below = baseTileAt(state, position.x, position.y + 1);
-  return tile === "H" || tile === "-" || below === "#" || below === "H";
+  return tile === "H" || tile === "-" || below === "#" || below === "X" || below === "H";
 }
 
 function directChaseDirection(state, guard) {

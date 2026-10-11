@@ -20,6 +20,23 @@ assert.ok(stages.length > 0, "stage catalog must not be empty");
 
 const ids = new Set();
 const actionValues = new Set(Object.values(Action));
+const validTiles = new Set(["#", "X", " ", "H", "-", "E"]);
+
+function validateStageTerrain(stage) {
+  for (const [y, row] of stage.tiles.entries()) {
+    for (const [x, tile] of [...row].entries()) {
+      assert.ok(validTiles.has(tile), `${stage.id}: unknown tile ${JSON.stringify(tile)} at ${x},${y}`);
+    }
+  }
+  for (const [actor, positions] of [["player", [stage.player]], ["guard", stage.guards]]) {
+    for (const [index, { x, y }] of positions.entries()) {
+      assert.ok(x >= 0 && x < stage.tiles[0].length && y >= 0 && y < stage.tiles.length,
+        `${stage.id}: ${actor}[${index}] must be in bounds`);
+      assert.ok(stage.tiles[y][x] !== "#" && stage.tiles[y][x] !== "X",
+        `${stage.id}: ${actor}[${index}] cannot start inside solid terrain`);
+    }
+  }
+}
 
 function validateGold(stage) {
   if (stage.gold === undefined) return;
@@ -42,7 +59,8 @@ function validateGold(stage) {
     const key = `${x},${y}`;
     assert.ok(x >= 0 && y >= 0 && y < stage.tiles.length && x < stage.tiles[0].length,
       `${stage.id}: gold[${index}] must be in bounds`);
-    assert.notEqual(stage.tiles[y][x], "#", `${stage.id}: gold[${index}] must be traversable`);
+    assert.ok(stage.tiles[y][x] !== "#" && stage.tiles[y][x] !== "X",
+      `${stage.id}: gold[${index}] must be traversable`);
     assert.ok(!seen.has(key), `${stage.id}: gold positions must be unique`);
     assert.ok(!occupied.has(key), `${stage.id}: gold cannot overlap an initial actor`);
     assert.ok(!goals.has(key), `${stage.id}: gold cannot overlap a Goal`);
@@ -64,6 +82,7 @@ function replayKnownSolution(stage) {
 }
 
 for (const stage of stages) {
+  validateStageTerrain(stage);
   validateGold(stage);
   assert.equal(typeof stage.id, "string", "stage id must be a string");
   assert.ok(stage.id.trim().length > 0, "stage id must not be empty");
@@ -95,6 +114,21 @@ for (const stage of stages) {
     `${stage.id}: knownSolution replay must remain deterministic`);
 }
 
+const terrainValidationStage = {
+  id: "terrain-validation",
+  tiles: ["#####", "#X E#", "#####"],
+  player: { x: 2, y: 1 },
+  guards: [{ x: 3, y: 1 }],
+};
+assert.doesNotThrow(() => validateStageTerrain(terrainValidationStage),
+  "stage validation accepts X as a tile and rejects neither valid terrain nor actors");
+assert.throws(() => validateStageTerrain({ ...terrainValidationStage, tiles: ["#####", "#? E#", "#####"] }),
+  /unknown tile/);
+assert.throws(() => validateStageTerrain({ ...terrainValidationStage, player: { x: 1, y: 1 },
+  tiles: ["#####", "##  #", "#####"] }), /cannot start inside solid terrain/);
+assert.throws(() => validateStageTerrain({ ...terrainValidationStage, player: { x: 1, y: 1 },
+  tiles: ["#####", "#X E#", "#####"] }), /cannot start inside solid terrain/);
+
 const goldValidationBase = {
   id: "gold-validation",
   tiles: ["######", "# E  #", "######"],
@@ -113,6 +147,8 @@ for (const invalidGold of [
 ]) {
   assert.throws(() => validateGold({ ...goldValidationBase, gold: invalidGold }));
 }
+assert.throws(() => validateGold({ ...goldValidationBase,
+  tiles: ["######", "# X  #", "######"], gold: [{ x: 2, y: 1 }] }), /must be traversable/);
 
 const sample = stages.find(({ id }) => id === "two-ladders");
 assert.ok(sample, "catalog must contain the migrated sampleStage");

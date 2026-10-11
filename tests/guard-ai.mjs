@@ -99,6 +99,8 @@ check(["###########", "#P        #", "#         #", "# H H     #", "# H H G   #"
 
 // No vertical connection means no fallback move.
 check(["#######", "#P#G  #", "#######"], "stay", "stay");
+check(["#########", "#P XG   #", "#########"], "stay", "stay");
+check(["#######", "#P G  #", "###X###"], "left", "chase");
 
 const original = map(["#########", "#P      #", "# H     #", "# H G   #", "#########"]);
 assert.deepEqual(decideGuardMove(original, 0), decideGuardMove(structuredClone(original), 0));

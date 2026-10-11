@@ -89,6 +89,15 @@ assert.ok(board.children[1 * 15 + 14].className.includes("tile--player"));
 assert.ok(board.children[2 * 15].className.includes("tile--guard"));
 assert.ok(board.children[2 * 15 + 14].className.includes("tile--gold"));
 
+const bedrockStage = {
+  tiles: ["#####", "#X  #", "#####"],
+  player: { x: 2, y: 1 },
+  guards: [],
+};
+renderBoard(board, createSampleState(bedrockStage));
+assert.ok(board.children[6].className.includes("tile--bedrock"));
+assert.equal(board.children[6].textContent, "▦");
+
 renderBoard(board, createSampleState(stage));
 assert.equal(board.style["--board-columns"], "13");
 assert.equal(board.style["--board-aspect-ratio"], "13 / 9");
