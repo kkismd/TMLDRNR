@@ -90,4 +90,30 @@ session.restart();
 assert.equal(session.state.turn, 0);
 assert.deepEqual(session.state.gold, parsed.stage.gold);
 
+const bottomDigRows = [
+  "#############",
+  "#         E #",
+  ...Array.from({ length: 5 }, () => "#           #"),
+  "# P         #",
+  "#############",
+];
+const bottomBrickText = bottomDigRows.join("\n");
+const bottomBrickMap = parseMapText(bottomBrickText);
+assert.equal(bottomBrickMap.ok, true);
+const bottomBrickSession = createSession(bottomBrickMap.stage);
+const bottomDig = bottomBrickSession.play(Action.DIG_RIGHT);
+assert.equal(bottomDig.kind, "accepted", "the map editor can playtest a bottom-row brick Dig");
+assert.deepEqual(bottomDig.state.holes.map(({ x, y }) => ({ x, y })), [{ x: 3, y: 8 }]);
+bottomBrickSession.restart();
+assert.equal(bottomBrickSession.state.turn, 0);
+
+const bottomBedrockText = bottomDigRows.slice(0, 8).concat("###X#########").join("\n");
+const bottomBedrockMap = parseMapText(bottomBedrockText);
+assert.equal(bottomBedrockMap.ok, true);
+const bottomBedrockSession = createSession(bottomBedrockMap.stage);
+const bottomBedrockDig = bottomBedrockSession.play(Action.DIG_RIGHT);
+assert.equal(bottomBedrockDig.kind, "rejected", "the same Dig against X does not advance the turn");
+assert.equal(bottomBedrockDig.state.turn, 0);
+assert.deepEqual(bottomBedrockDig.state.holes, []);
+
 console.log("Map text conversion cases passed.");
