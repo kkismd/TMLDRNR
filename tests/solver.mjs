@@ -12,7 +12,7 @@ const simpleStage = {
   tiles: ["#####", "#   E", "#####"], player: { x: 1, y: 1 }, guards: [],
 };
 
-function replay(stage, actions, cadence = GuardCadence.EVERY_TURN) {
+function replay(stage, actions, cadence = GuardCadence.EVERY_TURN, observe = () => {}) {
   let state = { ...stage, gold: stage.gold ?? [], holes: [], turn: 0, status: "playing",
     width: stage.tiles[0].length, height: stage.tiles.length,
     tiles: stage.tiles.map((row) => [...row]), guards: stage.guards.map((guard) => ({ ...guard })) };
@@ -20,6 +20,7 @@ function replay(stage, actions, cadence = GuardCadence.EVERY_TURN) {
     const result = step(state, action, cadence);
     assert.equal(result.kind, "accepted");
     state = result.state;
+    observe(state);
   }
   return state;
 }
@@ -101,7 +102,13 @@ test("multiple existing stages, including hole and Gold rules, solve and replay"
     lureIntoHoleStage, goldOutAndBackStage]) {
     const result = solveStage(stage);
     assert.equal(result.status, "solved", stage.id);
-    assert.equal(replay(stage, result.actions).status, "won", stage.id);
+    const history = [];
+    assert.equal(replay(stage, result.actions, undefined, (state) => history.push(state)).status, "won", stage.id);
+    if (stage === lureIntoHoleStage) {
+      assert.ok(history.some(({ holes }) => holes.some(({ remaining }) => remaining === 6)));
+      assert.deepEqual(history.flatMap(({ holes }) => holes.map(({ trap }) => trap?.remaining ?? trap?.phase))
+        .filter((value) => value !== undefined), [3, 2, 1, "climbing", "climbing"]);
+    }
     if (stage === goldOutAndBackStage) assert.ok(result.steps < stage.knownSolution.length);
   }
 });
