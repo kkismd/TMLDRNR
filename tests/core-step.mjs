@@ -26,14 +26,17 @@ game = state(ladder, { x: 3, y: 2 });
 assert.deepEqual(position(applyPlayerAction(game, Action.UP)), [3, 1, 0, "accepted"]);
 assert.deepEqual(position(applyPlayerAction(game, Action.DOWN)), [3, 3, 0, "accepted"]);
 
-const brokenLadder = state(["#######", "#  H  #", "#     #", "#  H  #", "#######"],
-  { x: 3, y: 2 });
+const brokenLadder = {
+  ...state(["#######", "#  H  #", "#     #", "#  H  #", "#######"], { x: 3, y: 2 }),
+  holes: [{ x: 1, y: 2, remaining: 3 }],
+};
 const rejectedClimb = step(brokenLadder, Action.UP);
 assert.equal(rejectedClimb.kind, "rejected", "an upper ladder cannot be climbed from empty space");
 assert.strictEqual(rejectedClimb.state, brokenLadder);
 assert.equal(rejectedClimb.state.turn, 0);
 assert.equal(rejectedClimb.guardPhase, false);
-assert.deepEqual(rejectedClimb.state.holes, []);
+assert.deepEqual(rejectedClimb.state.holes, [{ x: 1, y: 2, remaining: 3 }],
+  "a rejected ascent must not advance the hole countdown");
 
 const alternatingRows = Array.from({ length: 9 }, (_, y) => {
   const row = [...(y === 0 || y === 8 ? "#############" : "#           #")];
