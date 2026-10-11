@@ -11,15 +11,15 @@ export function baseTileAt(state, x, y) {
 
 export function isTraversable(state, x, y) {
   const tile = tileAt(state, x, y);
-  return tile !== undefined && tile !== "#";
+  return tile !== undefined && tile !== "#" && tile !== "X";
 }
 
 export function isSupported(state, position = state.player) {
   const tile = tileAt(state, position.x, position.y);
   if (tile === undefined) return false;
-  if (position.y === state.height - 1) return tile !== "#";
+  if (position.y === state.height - 1) return tile !== "#" && tile !== "X";
   const below = tileAt(state, position.x, position.y + 1);
-  return tile === "H" || tile === "-" || below === "#" || below === "H";
+  return tile === "H" || tile === "-" || below === "#" || below === "X" || below === "H";
 }
 
 export function isGuardSupported(state, guardIndex) {

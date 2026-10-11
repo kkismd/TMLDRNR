@@ -2,6 +2,7 @@ import { isPlayerSupported } from "../core/step.js";
 
 const tileAppearance = {
   "#": ["wall", "■"],
+  "X": ["bedrock", "▦"],
   "H": ["ladder", "▤"],
   "-": ["rope", "━"],
   "E": ["goal", "▣"],

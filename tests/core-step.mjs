@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { applyPlayerAction } from "../src/core/player-step.js";
-import { isSupported } from "../src/core/terrain.js";
+import { isSupported, isTraversable, tileAt } from "../src/core/terrain.js";
+import { step } from "../src/core/step.js";
 
 function state(rows, player) {
   return createSampleState({ tiles: rows, player, guards: [] });
@@ -43,6 +44,25 @@ for (const [action, expected] of [
 const dig = state(["#######", "#     #", "#######", "#######"], { x: 3, y: 1 });
 assert.deepEqual(applyPlayerAction(dig, Action.DIG_LEFT).pendingDig, { x: 2, y: 2 });
 assert.equal(applyPlayerAction(dig, Action.DIG_LEFT).state.turn, dig.turn);
+
+const bedrock = state(["#######", "#     #", "###X###"], { x: 3, y: 1 });
+assert.equal(tileAt(bedrock, 3, 2), "X");
+assert.equal(isTraversable(bedrock, 3, 2), false);
+assert.equal(isSupported(bedrock), true, "bedrock below the Player provides support");
+const blockedByBedrock = state(["#######", "# X   #", "#######"], { x: 1, y: 1 });
+assert.equal(applyPlayerAction(blockedByBedrock, Action.RIGHT).kind, "rejected");
+
+const bedrockDig = state(["#########", "#       #", "###X X###"], { x: 4, y: 1 });
+for (const action of [Action.DIG_LEFT, Action.DIG_RIGHT]) {
+  const rejectedDig = step(bedrockDig, action);
+  assert.equal(rejectedDig.kind, "rejected");
+  assert.equal(rejectedDig.state, bedrockDig);
+  assert.equal(rejectedDig.state.turn, 0);
+  assert.deepEqual(rejectedDig.state.holes, []);
+  assert.equal(rejectedDig.guardPhase, false);
+}
+assert.deepEqual(step(dig, Action.DIG_LEFT).state.holes[0],
+  { x: 2, y: 2, remaining: 6 }, "brick remains diggable");
 
 assert.deepEqual(applyPlayerAction(game, Action.WAIT),
   applyPlayerAction(structuredClone(game), Action.WAIT));
