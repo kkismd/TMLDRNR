@@ -4,7 +4,12 @@ import { decideGuardMove } from "../src/core/guard-ai.js";
 import { createSampleState } from "../src/core/state.js";
 import { GuardCadence, step } from "../src/core/step.js";
 import { isSupported, isTraversable } from "../src/core/terrain.js";
-import { sampleStage } from "../src/stages.js";
+
+const sampleStage = {
+  tiles: ["#############", "#           #", "#  H  E  H  #", "###H#####H###",
+    "#  H     H  #", "#  H     H  #", "#  H     H  #", "#  H     H  #", "#############"],
+  player: { x: 2, y: 7 }, guards: [{ x: 10, y: 7 }],
+};
 
 function game(tiles, player, guard) {
   return createSampleState({ tiles, player, guards: [guard] });
