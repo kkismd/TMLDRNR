@@ -100,7 +100,7 @@ header p, .hint, .legend { color: #becbd0; font-size: .85rem; }
 }
 .map-editor { margin-top: 1rem; padding: .75rem; border: 1px solid #526671; border-radius: .5rem; }
 .map-editor > label { display: block; margin-bottom: .4rem; }
-.map-editor textarea {
+.map-editor textarea:not([hidden]) {
   display: block;
   width: 100%;
   min-height: 15rem;
