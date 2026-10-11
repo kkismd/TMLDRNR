@@ -91,7 +91,6 @@ export function solveStage(stage, options = {}) {
   let expanded = 0;
   let maxReachedDepth = 0;
   let blockedByMaxDepth = false;
-  let blockedByMaxVisited = false;
 
   for (let head = 0; head < nodes.length; head += 1) {
     const node = nodes[head];
@@ -110,7 +109,10 @@ export function solveStage(stage, options = {}) {
       const key = stateKey(result.state, period);
       if (visited.has(key)) continue;
       if (depth > maxDepth) { blockedByMaxDepth = true; continue; }
-      if (nodes.length >= maxVisited) { blockedByMaxVisited = true; continue; }
+      if (nodes.length >= maxVisited) {
+        return { status: "limit-reached", actions: null, steps: null, visited: nodes.length,
+          expanded, maxReachedDepth, limit: blockedByMaxDepth ? "maxDepth" : "maxVisited" };
+      }
       const index = nodes.length;
       visited.set(key, index);
       nodes.push({ state: result.state, parent: head, action, depth });
@@ -118,7 +120,7 @@ export function solveStage(stage, options = {}) {
     }
   }
 
-  const limit = blockedByMaxDepth ? "maxDepth" : blockedByMaxVisited ? "maxVisited" : null;
+  const limit = blockedByMaxDepth ? "maxDepth" : null;
   return { status: limit ? "limit-reached" : "unsolvable", actions: null, steps: null,
     visited: nodes.length, expanded, maxReachedDepth, limit };
 }

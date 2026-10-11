@@ -53,9 +53,22 @@ test("depth and visited limits report only when they actually cut off states", (
   assert.deepEqual(solveStage(simpleStage, { maxDepth: 0 }).status, "limit-reached");
   assert.equal(solveStage(simpleStage, { maxDepth: 0 }).limit, "maxDepth");
   assert.equal(solveStage(simpleStage, { maxVisited: 1 }).limit, "maxVisited");
+  const denied = solveStage(simpleStage, { maxVisited: 1 });
+  assert.equal(denied.actions, null);
+  assert.equal(denied.steps, null);
   const enclosed = { tiles: ["#####", "# #E#", "#####"], player: { x: 1, y: 1 }, guards: [] };
   assert.equal(solveStage(enclosed, { maxDepth: 0 }).status, "unsolvable");
   assert.equal(solveStage(enclosed, { maxVisited: 1 }).status, "unsolvable");
+  const branchingStage = { tiles: ["#######", "#   E #", "#######"],
+    player: { x: 2, y: 1 }, guards: [] };
+  const complete = solveStage(branchingStage);
+  assert.equal(complete.status, "solved");
+  assert.equal(replay(branchingStage, complete.actions).status, "won");
+  const truncated = solveStage(branchingStage, { maxVisited: 4 });
+  assert.equal(truncated.status, "limit-reached");
+  assert.equal(truncated.limit, "maxVisited");
+  assert.equal(truncated.actions, null);
+  assert.equal(truncated.steps, null);
 });
 
 test("rejected and lost transitions are excluded; invalid input throws", () => {
