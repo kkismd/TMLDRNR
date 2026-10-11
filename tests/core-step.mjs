@@ -26,6 +26,45 @@ game = state(ladder, { x: 3, y: 2 });
 assert.deepEqual(position(applyPlayerAction(game, Action.UP)), [3, 1, 0, "accepted"]);
 assert.deepEqual(position(applyPlayerAction(game, Action.DOWN)), [3, 3, 0, "accepted"]);
 
+const brokenLadder = {
+  ...state(["#######", "#  H  #", "#     #", "#  H  #", "#######"], { x: 3, y: 2 }),
+  holes: [{ x: 1, y: 2, remaining: 3 }],
+};
+const rejectedClimb = step(brokenLadder, Action.UP);
+assert.equal(rejectedClimb.kind, "rejected", "an upper ladder cannot be climbed from empty space");
+assert.strictEqual(rejectedClimb.state, brokenLadder);
+assert.equal(rejectedClimb.state.turn, 0);
+assert.equal(rejectedClimb.guardPhase, false);
+assert.deepEqual(rejectedClimb.state.holes, [{ x: 1, y: 2, remaining: 3 }],
+  "a rejected ascent must not advance the hole countdown");
+
+const alternatingRows = Array.from({ length: 9 }, (_, y) => {
+  const row = [...(y === 0 || y === 8 ? "#############" : "#           #")];
+  if ([1, 3, 5, 7].includes(y)) row[11] = "H";
+  return row.join("");
+});
+const alternatingLadder = state(alternatingRows, { x: 11, y: 2 });
+assert.equal(alternatingLadder.width, 13);
+assert.equal(alternatingLadder.height, 9);
+assert.equal(step(alternatingLadder, Action.UP).kind, "rejected");
+const ladderToGap = applyPlayerAction(state(alternatingRows, { x: 11, y: 3 }), Action.DOWN);
+assert.equal(ladderToGap.kind, "accepted");
+assert.deepEqual(ladderToGap.state.player, { x: 11, y: 4 });
+
+const verticalMoves = [
+  { rows: ["#######", "#  H  #", "#  H  #", "#######"], from: 2, action: Action.UP, to: 1 },
+  { rows: ["#######", "#     #", "#  H  #", "#######"], from: 2, action: Action.UP, to: 1 },
+  { rows: ["#######", "#  H  #", "#     #", "#######"], from: 1, action: Action.DOWN, to: 2 },
+  { rows: ["#######", "#  H  #", "#  H  #", "#######"], from: 1, action: Action.DOWN, to: 2 },
+  { rows: ["#######", "#     #", "#  H  #", "#######"], from: 1, action: Action.DOWN, to: 2 },
+];
+for (const { rows, from, action, to } of verticalMoves) {
+  const before = state(rows, { x: 3, y: from });
+  const moved = applyPlayerAction(before, action);
+  assert.equal(moved.kind, "accepted");
+  assert.deepEqual(moved.state.player, { x: 3, y: to });
+}
+
 game = state(["#######", "#  H  #", "#     #", "#     #", "#######"], { x: 3, y: 1 });
 assert.equal(isSupported(game), true);
 const unsupportedExit = applyPlayerAction(game, Action.RIGHT);

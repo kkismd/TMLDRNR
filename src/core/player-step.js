@@ -44,8 +44,7 @@ export function applyPlayerAction(state, action) {
     }
     case Action.UP: {
       const nextY = y - 1;
-      if ((tileAt(state, x, y) === ladderTile || tileAt(state, x, nextY) === ladderTile) &&
-          isTraversable(state, x, nextY)) {
+      if (tileAt(state, x, y) === ladderTile && isTraversable(state, x, nextY)) {
         return accepted(state, x, nextY);
       }
       return rejected(state);
