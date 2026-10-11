@@ -19,3 +19,19 @@ export function isSupported(state, position = state.player) {
   const below = tileAt(state, position.x, position.y + 1);
   return tile === "H" || tile === "-" || below === "#" || below === "H";
 }
+
+export function isGuardSupported(state, guardIndex) {
+  const guard = state.guards[guardIndex];
+  if (!guard) return false;
+  if (isSupported(state, guard)) return true;
+
+  return (state.holes ?? []).some((hole) => {
+    const trap = hole.trap;
+    if (!trap || !["trapped", "climbing"].includes(trap.phase) ||
+        trap.guardIndex === guardIndex || hole.x !== guard.x || hole.y !== guard.y + 1) {
+      return false;
+    }
+    const trappedGuard = state.guards[trap.guardIndex];
+    return trappedGuard?.x === hole.x && trappedGuard?.y === hole.y;
+  });
+}

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { applyPlayerAction } from "../src/core/player-step.js";
-import { isSupported } from "../src/core/terrain.js";
+import { isGuardSupported, isSupported } from "../src/core/terrain.js";
 import { GuardCadence, GUARD_TRAP_TURNS, isPlayerSupported, step } from "../src/core/step.js";
 import { createSession } from "../src/web/session.js";
 import { renderBoard } from "../src/web/render.js";
@@ -59,7 +59,9 @@ const blocked = {
 };
 const blockedEscape = step(blocked, Action.WAIT);
 assert.deepEqual(blockedEscape.state.holes[0].trap, { guardIndex: 0, phase: "climbing" });
-assert.deepEqual(blockedEscape.state.guards, blocked.guards);
+assert.deepEqual(blockedEscape.state.guards[0], blocked.guards[0]);
+assert.notDeepEqual(blockedEscape.state.guards[1], blocked.guards[1]);
+assert.equal(blockedEscape.guardResults[1].outcome, "move");
 
 const blockedByTerrain = {
   ...state,
@@ -188,5 +190,117 @@ const playerAboveTrappedGuard = {
   guards: [{ x: 3, y: 2 }, { x: 3, y: 1 }],
 };
 assert.equal(isSupported(playerAboveTrappedGuard, playerAboveTrappedGuard.guards[1]), false);
+
+const stackedGuards = {
+  ...createSampleState({
+    tiles: ["#########", "#       #", "#########", "#       #", "#########"],
+    player: { x: 7, y: 1 },
+    guards: [{ x: 3, y: 2 }, { x: 3, y: 1 }],
+  }),
+  holes: [{ x: 3, y: 2, trap: { guardIndex: 0, phase: "climbing" } }],
+};
+assert.equal(isSupported(stackedGuards, stackedGuards.guards[1]), false);
+assert.equal(isGuardSupported(stackedGuards, 1), true);
+assert.equal(isGuardSupported(stackedGuards, 0), false);
+const stillTrapped = {
+  ...stackedGuards,
+  holes: [{ x: 3, y: 2, trap: { guardIndex: 0, phase: "trapped", remaining: 3 } }],
+};
+const supportedDuringTrap = step(stillTrapped, Action.WAIT);
+assert.deepEqual(supportedDuringTrap.state.guards[1], { x: 4, y: 1 });
+assert.equal(supportedDuringTrap.guardResults[1].outcome, "move");
+assert.deepEqual(supportedDuringTrap.state.holes[0].trap,
+  { guardIndex: 0, phase: "trapped", remaining: 2 });
+assert.equal(isGuardSupported({ ...stackedGuards, holes: [{ x: 3, y: 2, remaining: 3 }] }, 1), false);
+assert.equal(isGuardSupported({ ...stackedGuards,
+  holes: [{ x: 3, y: 2, trap: { guardIndex: 1, phase: "climbing" } }],
+  guards: [{ x: 3, y: 2 }, { x: 3, y: 1 }],
+}, 1), false);
+assert.equal(isGuardSupported({ ...stackedGuards,
+  holes: [{ x: 3, y: 2, trap: { guardIndex: 0, phase: "climbing" } }],
+  guards: [{ x: 2, y: 2 }, { x: 3, y: 1 }],
+}, 1), false);
+
+for (const cadence of Object.values(GuardCadence)) {
+  let current = structuredClone(stackedGuards);
+  let moved = false;
+  for (let turn = 0; turn < 6 && !moved; turn += 1) {
+    const result = step(current, Action.WAIT, cadence);
+    assert.equal(result.kind, "accepted");
+    assert.notEqual(result.guardResults[1].outcome, "gravity");
+    if (result.guardResults[1].outcome === "move") moved = true;
+    current = result.state;
+  }
+  assert.equal(moved, true, `${cadence}: upper Guard must get a normal movement opportunity`);
+  assert.deepEqual(current.guards, [{ x: 3, y: 2 }, { x: 4, y: 1 }]);
+  assert.deepEqual(step(structuredClone(stackedGuards), Action.WAIT, cadence),
+    step(stackedGuards, Action.WAIT, cadence));
+}
+
+function followGuardAfterDig(gap, cadence, reverseGuardOrder = false) {
+  const stageState = createSampleState({
+    tiles: ["#############", "#           #", "#############", "#           #", "#############"],
+    player: { x: 11, y: 1 },
+    guards: reverseGuardOrder
+      ? [{ x: 5, y: 1 }, { x: 6, y: 1 }]
+      : [{ x: 6, y: 1 }, { x: 6 - gap, y: 1 }],
+  });
+  const leaderIndex = reverseGuardOrder ? 1 : 0;
+  const followerIndex = 1 - leaderIndex;
+  let current = step(stageState, Action.DIG_LEFT, cadence).state;
+  assert.deepEqual(current.holes, [{ x: 10, y: 2, remaining: 6 }]);
+
+  let trapped = false;
+  let followerReachedTrapTop = false;
+  let followerMovedAcross = false;
+  let blockedTurns = 0;
+  for (let turn = 0; turn < 14 && current.status === "playing"; turn += 1) {
+    const hole = current.holes.find(({ x, y }) => x === 10 && y === 2);
+    if (hole?.trap) trapped = true;
+    const atTrapTop = hole?.trap && current.guards[followerIndex].x === hole.x &&
+      current.guards[followerIndex].y === hole.y - 1;
+
+    const result = step(current, Action.WAIT, cadence);
+    if (atTrapTop) {
+      followerReachedTrapTop = true;
+      assert.notEqual(result.guardResults[followerIndex].outcome, "gravity",
+        `${gap} cells / ${cadence}: supported follower must not fall`);
+      assert.notEqual(result.guardResults[followerIndex].outcome, "blocked",
+        `${gap} cells / ${cadence}: trap support must allow ordinary movement`);
+      if (result.guardResults[followerIndex].outcome === "move") followerMovedAcross = true;
+    }
+
+    if (result.guardResults[followerIndex]?.outcome === "blocked") blockedTurns += 1;
+    else blockedTurns = 0;
+    assert.ok(blockedTurns < 4,
+      `${gap} cells / ${cadence}: follower must not remain blocked by the trapped Guard`);
+    current = result.state;
+  }
+
+  const trapExpected = cadence === GuardCadence.EVERY_TURN ||
+    cadence === GuardCadence.TWO_OF_THREE;
+  assert.equal(trapped, trapExpected,
+    `${gap} cells / ${cadence}: distinguish a trap from a hole that expires before entry`);
+  if (followerReachedTrapTop) assert.equal(followerMovedAcross, true);
+  if (!trapExpected) assert.deepEqual(current.holes, [],
+    `${cadence}: the hole should restore before either Guard enters it`);
+  return { trapped, followerReachedTrapTop, followerMovedAcross };
+}
+
+for (const gap of [1, 2, 3, 4]) {
+  for (const cadence of Object.values(GuardCadence)) {
+    followGuardAfterDig(gap, cadence);
+  }
+}
+const reversedOrderCase = followGuardAfterDig(1, GuardCadence.EVERY_TURN, true);
+assert.equal(reversedOrderCase.trapped, true);
+assert.equal(reversedOrderCase.followerReachedTrapTop, true);
+
+const upperMovesAway = step(stackedGuards, Action.WAIT);
+assert.deepEqual(upperMovesAway.state.guards[1], { x: 4, y: 1 });
+const lowerEscapesAfterward = step(upperMovesAway.state, Action.WAIT);
+assert.equal(lowerEscapesAfterward.guardResults[0].outcome, "escape");
+assert.deepEqual(lowerEscapesAfterward.state.guards[0], { x: 3, y: 1 });
+assert.deepEqual(lowerEscapesAfterward.state.holes, []);
 
 console.log("Guard trap lifecycle cases passed.");

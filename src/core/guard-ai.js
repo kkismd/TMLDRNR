@@ -1,4 +1,4 @@
-import { baseTileAt, isSupported, isTraversable } from "./terrain.js";
+import { baseTileAt, isGuardSupported, isTraversable } from "./terrain.js";
 
 function isBaseTraversable(state, x, y) {
   const tile = baseTileAt(state, x, y);
@@ -64,7 +64,7 @@ export function decideGuardMove(state, guardIndex) {
   const guard = state.guards[guardIndex];
   if (!guard) throw new RangeError(`Invalid guard index: ${guardIndex}`);
 
-  if (!isSupported(state, guard)) {
+  if (!isGuardSupported(state, guardIndex)) {
     throw new Error("Invalid game state: Guard planning requires a supported position.");
   }
 
