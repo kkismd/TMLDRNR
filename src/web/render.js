@@ -41,10 +41,10 @@ export function renderBoard(element, state) {
         [kind, symbol] = [trap?.phase === "climbing" ? "guard-climbing" :
           trap ? "guard-trapped" : "guard", trap?.phase === "climbing" ? "⇧" : "◆"];
       } else if (hasGold) {
-        [kind, symbol] = ["gold", "●"];
+        [kind, symbol] = ["gold", "▲"];
       }
 
-      cell.className = `tile tile--${kind}${trap ? ` tile--trap-${trap.phase}` : ""}${holeClass}${hasGold ? " tile--has-gold" : ""}${goal ?
+      cell.className = `tile tile--${kind}${trap ? ` tile--trap-${trap.phase}` : ""}${holeClass}${goal ?
         (state.gold.length === 0 ? " tile--goal-active" : " tile--goal-inactive") : ""}`;
       cell.textContent = symbol;
       cells.append(cell);
