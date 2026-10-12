@@ -161,7 +161,9 @@ const fallDestinationCollision = game(
   ["#########", "#       #", "#### ####", "#########"],
   { x: 4, y: 1 }, { x: 4, y: 2 });
 const collisionAfterFall = step(fallDestinationCollision, Action.WAIT);
-assert.equal(collisionAfterFall.state.status, "lost");
+assert.equal(collisionAfterFall.kind, "accepted",
+  "Guard directly below supports Player instead of triggering gravity collision");
+assert.deepEqual(collisionAfterFall.state.player, { x: 4, y: 1 });
 assert.deepEqual(collisionAfterFall.state.guards[0], { x: 4, y: 2 });
 
 // Unsupported at update start settles fully before any AI decision.
@@ -393,8 +395,9 @@ assert.equal(playerFallDeath.kind, "accepted");
 assert.equal(playerFallDeath.state.status, "playing");
 assert.deepEqual(playerFallDeath.state.player, { x: 3, y: 1 });
 const playerFallDeathNext = step(playerFallDeath.state, Action.WAIT);
-assert.equal(playerFallDeathNext.state.status, "lost");
-assert.deepEqual(playerFallDeathNext.defeat, { phase: "player", guardIndex: 0 });
+assert.equal(playerFallDeathNext.kind, "accepted",
+  "the Guard below supports Player through the next Player phase");
+assert.equal(playerFallDeathNext.state.status, "playing");
 
 const playerLadderContact = createSampleState({
   tiles: ["#########", "###H#####", "###H#####", "#########"],
@@ -534,8 +537,9 @@ const fallingGoldCollision = createSampleState({
 });
 const collisionSetup = step(fallingGoldCollision, Action.RIGHT);
 const collisionBeforeGold = step(collisionSetup.state, Action.WAIT);
-assert.equal(collisionBeforeGold.state.status, "lost");
-assert.deepEqual(collisionBeforeGold.defeat, { phase: "player", guardIndex: 0 });
+assert.equal(collisionBeforeGold.state.status, "playing",
+  "Guard occupancy supports Player without triggering fall collision");
+assert.deepEqual(collisionBeforeGold.state.player, { x: 2, y: 1 });
 assert.deepEqual(collisionBeforeGold.state.gold, [{ x: 2, y: 2 }]);
 
 // Each accepted fall WAIT advances the hole lifecycle.

@@ -17,13 +17,7 @@ export function isPlayerSupported(state) {
   if (isSupported(state)) return true;
 
   const { x, y } = state.player;
-  return (state.holes ?? []).some((hole) => {
-    const trap = hole.trap;
-    if (!trap || !["trapped", "climbing"].includes(trap.phase) ||
-        hole.x !== x || hole.y !== y + 1) return false;
-    const guard = state.guards[trap.guardIndex];
-    return guard?.x === hole.x && guard?.y === hole.y;
-  });
+  return state.guards.some((guard) => guard.x === x && guard.y === y + 1);
 }
 
 // Applies Player intent only; world physics and turn progression belong to step().
