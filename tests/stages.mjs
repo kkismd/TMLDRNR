@@ -29,7 +29,7 @@ const terraceMap = [
 
 assert.deepEqual(stages, [blankStage, goldGuardRepositionStage, terraceDescentStage]);
 assert.deepEqual(stages.map(({ id }) => id), ["blank", "gold-guard-reposition", "terrace-descent"]);
-assert.deepEqual(stages.map(({ title }) => title), ["ブランクマップ", "待つことで道を開く", "掘って降り、追わせて登る"]);
+assert.deepEqual(stages.map(({ title }) => title), ["ブランクマップ", "上段のロープ", "段丘の足場"]);
 
 for (const [stage, map] of [[blankStage, blankMap], [goldGuardRepositionStage, goldMap], [terraceDescentStage, terraceMap]]) {
   assert.equal(stage.tiles.length, 9);
@@ -62,7 +62,7 @@ assert.deepEqual(goldGuardRepositionStage.knownSolution, [
   Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
 ]);
 assert.equal(terraceDescentStage.id, "terrace-descent");
-assert.equal(terraceDescentStage.title, "掘って降り、追わせて登る");
+assert.equal(terraceDescentStage.title, "段丘の足場");
 assert.equal(terraceDescentStage.theme, "中層の床を掘って下層のGoldを回収し、Guardを引きつけながら別の梯子でGoalへ戻る");
 assert.deepEqual(terraceDescentStage.player, { x: 2, y: 2 });
 assert.deepEqual(terraceDescentStage.guards, [{ x: 9, y: 4 }]);
