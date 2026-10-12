@@ -73,7 +73,7 @@ ChatGPT が GitHub issue を新規作成するときは、issue の目的に対�
 - ADR issue: `ADR`
 - 実装 / Task issue: `Task`
 
-これら4つは issue 種別を表すラベルであり、該当する issue をラベルなしで作成しない。種別が複数に見える場合は、issue の主目的を `AGENTS.md` の issue 分割・種別定義に照らして確定してから作成する。Blueprint 等、上記4種へ直接対応しない特殊な issue を新規作成する場合は、既存運用との対応を確認し、ラベルの扱いを未決定のまま作成しない。
+これら4つは issue 種別を表すラベルであり、該当する issue をラベルなしで作成しない。種別が複数に見える場合は、issue の主目的を `AGENTS.md` の issue 分割・種別定義に照らして確定してから作成する。Blueprint はプロジェクト全体の設計方針を定義する基準文書として扱い、通常の Issue 作成種別には含めない。既存 Blueprint の更新を原則とし、プロダクトの基本仮説や設計思想を独立して再定義する必要が生じた場合に限り、新たな Blueprint Issue の作成とラベル運用を検討する。
 
 `ADR_accepted` は issue 種別ではなく ADR の決定状態を表す補助ラベルとする。ADR issue の本文上の決定状態が `採用` になった時点で、`ADR` ラベルに加えて `ADR_accepted` を付与する。提案中の ADR には `ADR_accepted` を付与しない。
 
