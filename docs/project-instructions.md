@@ -64,6 +64,19 @@ PR レビューでは最新 head SHA を確認し、head が変わった場合�
 
 レビューコメント本文には、**承認相当（blocking 指摘なし・マージ可能）／要修正（blocking 指摘あり）／確認事項あり**のいずれかの判断、根拠、必要な指摘を明記する。本文で「承認相当」と判断しても GitHub 上の正式な `APPROVE` status が付与されたとは扱わない。
 
+## Issue ラベル運用
+
+ChatGPT が GitHub issue を新規作成するときは、issue の目的に対応する種別ラベルを作成時に付与する。
+
+- Tracker / マイルストーン issue: `Milestone`
+- 調査・検討 issue: `Research`
+- ADR issue: `ADR`
+- 実装 / Task issue: `Task`
+
+これら4つは issue 種別を表すラベルであり、該当する issue をラベルなしで作成しない。種別が複数に見える場合は、issue の主目的を `AGENTS.md` の issue 分割・種別定義に照らして確定してから作成する。Blueprint 等、上記4種へ直接対応しない特殊な issue を新規作成する場合は、既存運用との対応を確認し、ラベルの扱いを未決定のまま作成しない。
+
+`ADR_accepted` は issue 種別ではなく ADR の決定状態を表す補助ラベルとする。ADR issue の本文上の決定状態が `採用` になった時点で、`ADR` ラベルに加えて `ADR_accepted` を付与する。提案中の ADR には `ADR_accepted` を付与しない。
+
 ## 回答方針
 
 - 決定済み事項、提案、暫定方針、推測、検証仮説および未決定事項を区別する。
