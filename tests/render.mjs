@@ -31,7 +31,7 @@ renderBoard(board, createSampleState(stage));
 assert.equal(board.style["--board-columns"], "13");
 assert.equal(board.style["--board-aspect-ratio"], "13 / 9");
 assert.ok(board.children.some(({ className, textContent }) =>
-  className.includes("tile--gold") && textContent === "●"));
+  className.includes("tile--gold") && textContent === "▲"));
 assert.ok(board.children.some(({ className }) => className.includes("tile--goal-inactive")));
 
 const guardOnGoldState = createSampleState({
@@ -40,7 +40,8 @@ const guardOnGoldState = createSampleState({
 });
 renderBoard(board, guardOnGoldState);
 const guardOnGold = board.children.find(({ className }) => className.includes("tile--guard"));
-assert.ok(guardOnGold.className.includes("tile--has-gold"));
+assert.ok(!guardOnGold.className.includes("tile--has-gold"));
+assert.ok(!guardOnGold.className.includes("tile--gold"));
 assert.equal(guardOnGold.textContent, "◆");
 
 const activeState = createSampleState({ ...stage, gold: [] });
