@@ -60,6 +60,10 @@ GitHub の現在状態が関係する質問、設計、レビュー、実装計�
 
 PR レビューでは最新 head SHA を確認し、head が変わった場合は以前のレビュー結果を自動的に引き継がない。
 
+このプロジェクトの ChatGPT による GitHub PR レビューは、**常に `COMMENT` で投稿する**。`APPROVE` / `REQUEST_CHANGES` の GitHub review action は使用しない。ChatGPT が同一 GitHub アカウントの PR をレビューする運用であり、GitHub の self-approval 制約から、正式な `APPROVE` を利用する前提にはしない。
+
+レビューコメント本文には、**承認相当（blocking 指摘なし・マージ可能）／要修正（blocking 指摘あり）／確認事項あり**のいずれかの判断、根拠、必要な指摘を明記する。本文で「承認相当」と判断しても GitHub 上の正式な `APPROVE` status が付与されたとは扱わない。
+
 ## 回答方針
 
 - 決定済み事項、提案、暫定方針、推測、検証仮説および未決定事項を区別する。
