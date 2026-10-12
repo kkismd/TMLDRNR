@@ -35,8 +35,9 @@ const actorRows = [
   "#  GH   #",
   "#########",
 ];
+const actorTiles = actorRows.map((row) => row.replace(/[PG]/g, " "));
 const supportedByGuard = createSampleState({
-  tiles: actorRows,
+  tiles: actorTiles,
   player: { x: 3, y: 1 },
   guards: [{ x: 3, y: 2 }],
 });
@@ -61,7 +62,7 @@ assert.equal(fall.kind, "accepted");
 assert.deepEqual(fall.state.player, { x: 3, y: 2 });
 assert.equal(fall.state.turn, first.state.turn + 1);
 
-const session = createSession({ ...parsed.stage, tiles: actorRows, gold: [],
+const session = createSession({ ...parsed.stage, tiles: actorTiles, gold: [],
   player: { x: 3, y: 1 }, guards: [{ x: 3, y: 2 }] });
 const initial = session.state;
 const sessionFirst = session.play(Action.WAIT);
@@ -77,6 +78,20 @@ function replay(initialState) {
   });
 }
 assert.deepEqual(replay(supportedByGuard), replay(structuredClone(supportedByGuard)));
+
+const fallingGuardState = createSampleState({
+  tiles: ["#########", "#       #", "###   ###", "###   ###", "#########"],
+  player: { x: 4, y: 1 },
+  guards: [{ x: 4, y: 2 }],
+});
+const guardFall = step(fallingGuardState, Action.WAIT);
+assert.deepEqual(guardFall.state.player, { x: 4, y: 1 },
+  "Player stays in place while the supporting Guard falls");
+assert.deepEqual(guardFall.state.guards[0], { x: 4, y: 3 });
+assert.equal(isPlayerSupported(guardFall.state), false);
+const playerFallAfterGuard = step(guardFall.state, Action.WAIT);
+assert.deepEqual(playerFallAfterGuard.state.player, { x: 4, y: 2 },
+  "Player falls one cell on the next WAIT after Guard support disappears");
 
 const unsupportedGuard = createSampleState({
   tiles: ["#########", "#       #", "###   ###", "###   ###", "#########"],

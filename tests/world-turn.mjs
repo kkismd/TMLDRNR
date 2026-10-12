@@ -375,6 +375,7 @@ assert.deepEqual(run(movingPair, GuardCadence.EVERY_OTHER),
 // Player contact is accepted and becomes terminal before the Guard phase.
 const playerContact = {
   ...game(floor, { x: 2, y: 1 }, { x: 3, y: 1 }),
+  gold: [{ x: 3, y: 1 }],
 };
 const playerDeath = step(playerContact, Action.RIGHT);
 assert.equal(playerDeath.kind, "accepted");
@@ -384,6 +385,8 @@ assert.equal(playerDeath.state.turn, 1);
 assert.equal(playerDeath.guardPhase, false);
 assert.deepEqual(playerDeath.guardResults, []);
 assert.deepEqual(playerDeath.defeat, { phase: "player", guardIndex: 0 });
+assert.deepEqual(playerDeath.state.gold, [{ x: 3, y: 1 }],
+  "same-cell collision is checked before Gold collection");
 assert.equal(playerDeath.clear, null);
 
 const playerFallContact = createSampleState({
@@ -536,6 +539,9 @@ const fallingGoldCollision = createSampleState({
   player: { x: 1, y: 1 }, guards: [{ x: 2, y: 2 }], gold: [{ x: 2, y: 2 }],
 });
 const collisionSetup = step(fallingGoldCollision, Action.RIGHT);
+// A Guard directly below now supports Player, so this former fall destination
+// cannot be entered through gravity; the playerContact case above retains the
+// reachable collision-before-Gold contract.
 const collisionBeforeGold = step(collisionSetup.state, Action.WAIT);
 assert.equal(collisionBeforeGold.state.status, "playing",
   "Guard occupancy supports Player without triggering fall collision");
