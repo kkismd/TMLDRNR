@@ -73,4 +73,33 @@ export const terraceDescentStage = {
   ],
 };
 
-export const stages = [blankStage, goldGuardRepositionStage, terraceDescentStage];
+export const twoLaddersStage = {
+  id: "two-ladders",
+  title: "二本の梯子",
+  theme: "上下の通路と二本の梯子を持つ盤面",
+  tiles: [
+    "#############",
+    "#   ---     #",
+    "# EH   H    #",
+    "###HXXXH#####",
+    "#  H   H    #",
+    "#  H## H##  #",
+    "#  H   H    #",
+    "#XXXXXXXXXXX#",
+    "#############",
+  ],
+  player: { x: 1, y: 2 },
+  guards: [{ x: 10, y: 2 }],
+  gold: [{ x: 11, y: 6 }],
+  knownSolution: [
+    Action.RIGHT, Action.LEFT, Action.RIGHT, Action.RIGHT, Action.WAIT,
+    Action.UP, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.RIGHT, Action.WAIT, Action.RIGHT, Action.RIGHT, Action.DIG_LEFT,
+    Action.DIG_RIGHT, Action.RIGHT, Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.WAIT, Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
+    Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT, Action.UP,
+    Action.UP, Action.UP, Action.UP, Action.LEFT,
+  ],
+};
+
+export const stages = [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage];

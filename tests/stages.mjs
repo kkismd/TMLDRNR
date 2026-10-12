@@ -3,7 +3,7 @@ import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { step } from "../src/core/step.js";
 import { formatStageAsMapText, parseMapText } from "../src/map-text.js";
-import { blankStage, goldGuardRepositionStage, stages, terraceDescentStage } from "../src/stages.js";
+import { blankStage, goldGuardRepositionStage, stages, terraceDescentStage, twoLaddersStage } from "../src/stages.js";
 
 const blankMap = [
   "#############", "#           #", "#           #", "#           #",
@@ -26,12 +26,24 @@ const terraceMap = [
   "#XXXXXXXXXXX#",
   "#############",
 ];
+const twoLaddersMap = [
+  "#############",
+  "#   ---     #",
+  "#PEH   H  G #",
+  "###HXXXH#####",
+  "#  H   H    #",
+  "#  H## H##  #",
+  "#  H   H   $#",
+  "#XXXXXXXXXXX#",
+  "#############",
+];
 
-assert.deepEqual(stages, [blankStage, goldGuardRepositionStage, terraceDescentStage]);
-assert.deepEqual(stages.map(({ id }) => id), ["blank", "gold-guard-reposition", "terrace-descent"]);
-assert.deepEqual(stages.map(({ title }) => title), ["ブランクマップ", "上段のロープ", "段丘の足場"]);
+assert.deepEqual(stages, [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage]);
+assert.deepEqual(stages.map(({ id }) => id), ["blank", "gold-guard-reposition", "terrace-descent", "two-ladders"]);
+assert.deepEqual(stages.map(({ title }) => title), ["ブランクマップ", "上段のロープ", "段丘の足場", "二本の梯子"]);
 
-for (const [stage, map] of [[blankStage, blankMap], [goldGuardRepositionStage, goldMap], [terraceDescentStage, terraceMap]]) {
+for (const [stage, map] of [[blankStage, blankMap], [goldGuardRepositionStage, goldMap],
+  [terraceDescentStage, terraceMap], [twoLaddersStage, twoLaddersMap]]) {
   assert.equal(stage.tiles.length, 9);
   assert.ok(stage.tiles.every((row) => row.length === 13));
   const formatted = formatStageAsMapText(stage);
@@ -72,6 +84,23 @@ assert.deepEqual(terraceDescentStage.knownSolution, [
   Action.RIGHT, Action.WAIT, Action.WAIT, Action.RIGHT, Action.RIGHT, Action.UP,
   Action.UP, Action.UP, Action.UP, Action.RIGHT,
 ]);
+assert.deepEqual(twoLaddersStage.player, { x: 1, y: 2 });
+assert.deepEqual(twoLaddersStage.guards, [{ x: 10, y: 2 }]);
+assert.deepEqual(twoLaddersStage.gold, [{ x: 11, y: 6 }]);
+assert.deepEqual(twoLaddersStage.tiles, [
+  "#############", "#   ---     #", "# EH   H    #", "###HXXXH#####",
+  "#  H   H    #", "#  H## H##  #", "#  H   H    #", "#XXXXXXXXXXX#", "#############",
+]);
+assert.equal(twoLaddersStage.knownSolution.length, 34);
+assert.deepEqual(twoLaddersStage.knownSolution, [
+  Action.RIGHT, Action.LEFT, Action.RIGHT, Action.RIGHT, Action.WAIT,
+  Action.UP, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+  Action.RIGHT, Action.WAIT, Action.RIGHT, Action.RIGHT, Action.DIG_LEFT,
+  Action.DIG_RIGHT, Action.RIGHT, Action.WAIT, Action.WAIT, Action.WAIT,
+  Action.WAIT, Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT,
+  Action.LEFT, Action.LEFT, Action.LEFT, Action.LEFT, Action.UP,
+  Action.UP, Action.UP, Action.UP, Action.LEFT,
+]);
 
 function replay(stage) {
   let state = createSampleState(stage);
@@ -103,6 +132,12 @@ assert.deepEqual(terraceReplay.states[14].player, { x: 7, y: 2 });
 assert.deepEqual(terraceReplay.states[14].guards, [{ x: 7, y: 3 }]);
 assert.equal(terraceReplay.state.status, "won");
 assert.deepEqual(terraceReplay, replay(terraceDescentStage), "replay must be deterministic");
+const twoLaddersReplay = replay(twoLaddersStage);
+assert.equal(twoLaddersReplay.states.length, 34);
+assert.deepEqual(twoLaddersReplay.states[20].gold, [], "twenty-first accepted action collects Gold");
+assert.deepEqual(twoLaddersReplay.states[33].player, { x: 2, y: 2 });
+assert.equal(twoLaddersReplay.state.status, "won");
+assert.deepEqual(twoLaddersReplay, replay(twoLaddersStage), "replay must be deterministic");
 
 for (const stage of stages) {
   const state = createSampleState(stage);
