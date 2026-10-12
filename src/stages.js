@@ -22,7 +22,7 @@ export const blankStage = {
 
 export const goldGuardRepositionStage = {
   id: "gold-guard-reposition",
-  title: "待つことで道を開く",
+  title: "上段のロープ",
   theme: "Gold回収後、左右の危険を読み、WAITとGuardの誘導を使って左上Goalへ帰る",
   tiles: [
     "#############",
@@ -50,7 +50,7 @@ export const goldGuardRepositionStage = {
 
 export const terraceDescentStage = {
   id: "terrace-descent",
-  title: "掘って降り、追わせて登る",
+  title: "段丘の足場",
   theme: "中層の床を掘って下層のGoldを回収し、Guardを引きつけながら別の梯子でGoalへ戻る",
   tiles: [
     "#############",
