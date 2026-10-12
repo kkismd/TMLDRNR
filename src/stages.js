@@ -48,4 +48,29 @@ export const goldGuardRepositionStage = {
   ],
 };
 
-export const stages = [blankStage, goldGuardRepositionStage];
+export const terraceDescentStage = {
+  id: "terrace-descent",
+  title: "掘って降り、追わせて登る",
+  theme: "中層の床を掘って下層のGoldを回収し、Guardを引きつけながら別の梯子でGoalへ戻る",
+  tiles: [
+    "#############",
+    "#           #",
+    "#   H   E   #",
+    "###H###H#####",
+    "#  H   H    #",
+    "#  ### H ####",
+    "#      H    #",
+    "#XXXXXXXXXXX#",
+    "#############",
+  ],
+  player: { x: 2, y: 2 },
+  guards: [{ x: 9, y: 4 }],
+  gold: [{ x: 5, y: 6 }],
+  knownSolution: [
+    Action.RIGHT, Action.DOWN, Action.DOWN, Action.RIGHT, Action.WAIT, Action.DIG_RIGHT,
+    Action.RIGHT, Action.WAIT, Action.WAIT, Action.RIGHT, Action.RIGHT, Action.UP,
+    Action.UP, Action.UP, Action.UP, Action.RIGHT,
+  ],
+};
+
+export const stages = [blankStage, goldGuardRepositionStage, terraceDescentStage];
