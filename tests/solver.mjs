@@ -168,7 +168,14 @@ test("CLI reports parser, catalog, file, and argument errors as JSON", async () 
     assert.equal(catalog.status, 0);
     assert.equal(catalog.result.stageId, stageId);
   }
-  for (const obsoleteId of ["selector-smoke", "two-ladders", "gold-out-and-back"]) {
+  const twoLadders = await invoke(["--stage", "two-ladders", "--cadence", "1:1",
+    "--max-depth", "60", "--max-visited", "500000"]);
+  assert.equal(twoLadders.status, 0);
+  assert.equal(twoLadders.result.status, "solved");
+  assert.equal(twoLadders.result.steps, 34);
+  assert.equal(twoLadders.result.visited, 13015);
+  assert.equal(twoLadders.result.expanded, 12253);
+  for (const obsoleteId of ["selector-smoke", "gold-out-and-back"]) {
     const obsolete = await invoke(["--stage", obsoleteId]);
     assert.equal(obsolete.status, 1);
     assert.equal(obsolete.result.status, "error");
