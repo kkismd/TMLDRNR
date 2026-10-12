@@ -171,8 +171,9 @@ const ordinaryGuardSupport = {
   player: { x: 3, y: 1 },
   holes: [{ x: 3, y: 2, remaining: 3 }],
 };
-assert.throws(() => applyPlayerAction(ordinaryGuardSupport, Action.WAIT), /supported position/);
-assert.equal(isPlayerSupported(ordinaryGuardSupport), false);
+assert.equal(applyPlayerAction(ordinaryGuardSupport, Action.WAIT).kind, "accepted");
+assert.equal(isPlayerSupported(ordinaryGuardSupport), true,
+  "ordinary Guard occupancy supports Player without trap metadata");
 const staleTrapSupport = {
   ...playerOverTrap(),
   guards: [{ x: 2, y: 2 }],
