@@ -102,4 +102,30 @@ export const twoLaddersStage = {
   ],
 };
 
-export const stages = [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage];
+export const centralLadderStage = {
+  id: "central-ladder",
+  title: "中央の梯子",
+  theme: "Guardの足場化と中央梯子での同期解除を含む試遊済み検証stage",
+  tiles: [
+    "#############",
+    "#           #",
+    "#           #",
+    "#           #",
+    "# # ####H##H#",
+    "#       H  H#",
+    "#       H EH#",
+    "##      H  H#",
+    "##XXXXXXXXX##",
+  ],
+  player: { x: 4, y: 3 },
+  guards: [{ x: 2, y: 3 }, { x: 10, y: 7 }],
+  gold: [{ x: 3, y: 3 }],
+  knownSolution: [
+    Action.RIGHT, Action.LEFT, Action.WAIT, Action.LEFT,
+    Action.WAIT, Action.WAIT, Action.WAIT,
+    Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.WAIT, Action.RIGHT, Action.RIGHT, Action.UP, Action.LEFT,
+  ],
+};
+
+export const stages = [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage, centralLadderStage];
