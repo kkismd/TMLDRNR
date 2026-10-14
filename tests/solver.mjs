@@ -4,7 +4,7 @@ import { Action } from "../src/core/actions.js";
 import { GuardCadence, step } from "../src/core/step.js";
 import { createSampleState } from "../src/core/state.js";
 import { solveStage } from "../src/solver/solve-stage.js";
-import { blankStage, terraceDescentStage } from "../src/stages.js";
+import { blankStage, centralLadderStage, terraceDescentStage } from "../src/stages.js";
 import { runCli } from "../scripts/solve-stage.mjs";
 
 const simpleStage = {
@@ -163,7 +163,7 @@ test("CLI reports parser, catalog, file, and argument errors as JSON", async () 
     assert.equal(result.status, 1);
     assert.equal(result.result.status, "error");
   }
-  for (const stageId of ["blank", "gold-guard-reposition", terraceDescentStage.id]) {
+  for (const stageId of ["blank", "gold-guard-reposition", terraceDescentStage.id, centralLadderStage.id]) {
     const catalog = await invoke(["--stage", stageId, "--max-depth", "0"]);
     assert.equal(catalog.status, 0);
     assert.equal(catalog.result.stageId, stageId);
