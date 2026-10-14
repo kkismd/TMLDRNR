@@ -128,4 +128,38 @@ export const centralLadderStage = {
   ],
 };
 
-export const stages = [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage, centralLadderStage];
+export const fourChambersStage = {
+  id: "four-chambers",
+  title: "四つの小部屋",
+  theme: "Championship Lode Runner 50面を着想源とした2×2の掘削・経路構築課題。Guard誘導を主題としない",
+  tiles: [
+    "        H   H",
+    "H#######H   H",
+    "H#  #H #H#  H",
+    "H#  #  #H### ",
+    "H ##### H# ##",
+    "H# H#  #H### ",
+    "H#  #  #H# ##",
+    "H#######H##- ",
+    "        H#  E",
+  ],
+  player: { x: 1, y: 0 },
+  guards: [{ x: 10, y: 8 }],
+  gold: [
+    { x: 2, y: 3 }, { x: 6, y: 3 }, { x: 12, y: 3 },
+    { x: 10, y: 4 }, { x: 12, y: 5 },
+    { x: 2, y: 6 }, { x: 6, y: 6 }, { x: 10, y: 6 }, { x: 12, y: 7 },
+  ],
+  knownSolution: [
+    Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.DIG_LEFT, Action.RIGHT, Action.DIG_LEFT, Action.LEFT, Action.WAIT, Action.DIG_LEFT,
+    Action.DOWN, Action.DIG_LEFT, Action.RIGHT, Action.WAIT, Action.LEFT, Action.LEFT, Action.LEFT, Action.DIG_RIGHT, Action.LEFT, Action.DIG_RIGHT,
+    Action.RIGHT, Action.WAIT, Action.DIG_RIGHT, Action.DOWN, Action.DIG_RIGHT, Action.LEFT, Action.WAIT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
+    Action.DIG_RIGHT, Action.RIGHT, Action.WAIT, Action.WAIT, Action.RIGHT, Action.RIGHT, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP,
+    Action.DIG_RIGHT, Action.DOWN, Action.DIG_RIGHT, Action.DOWN, Action.DIG_RIGHT, Action.DOWN, Action.DIG_RIGHT, Action.DOWN, Action.DIG_RIGHT,
+    Action.RIGHT, Action.WAIT, Action.RIGHT, Action.LEFT, Action.LEFT, Action.UP, Action.UP, Action.UP, Action.UP, Action.UP, Action.RIGHT, Action.RIGHT, Action.WAIT,
+    Action.RIGHT, Action.RIGHT, Action.DIG_LEFT, Action.DOWN, Action.DIG_LEFT, Action.LEFT, Action.WAIT, Action.LEFT, Action.DIG_RIGHT,
+    Action.RIGHT, Action.WAIT, Action.DIG_RIGHT, Action.RIGHT, Action.WAIT, Action.WAIT, Action.WAIT,
+  ],
+};
+
+export const stages = [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage, centralLadderStage, fourChambersStage];

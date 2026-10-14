@@ -3,7 +3,7 @@ import { Action } from "../src/core/actions.js";
 import { createSampleState } from "../src/core/state.js";
 import { step } from "../src/core/step.js";
 import { formatStageAsMapText, parseMapText } from "../src/map-text.js";
-import { blankStage, centralLadderStage, goldGuardRepositionStage, stages, terraceDescentStage, twoLaddersStage } from "../src/stages.js";
+import { blankStage, centralLadderStage, fourChambersStage, goldGuardRepositionStage, stages, terraceDescentStage, twoLaddersStage } from "../src/stages.js";
 
 const blankMap = [
   "#############", "#           #", "#           #", "#           #",
@@ -48,13 +48,25 @@ const centralLadderMap = [
   "##      H GH#",
   "##XXXXXXXXX##",
 ];
+const fourChambersMap = [
+  " P      H   H",
+  "H#######H   H",
+  "H#  #H #H#  H",
+  "H#$ # $#H###$",
+  "H ##### H#$##",
+  "H# H#  #H###$",
+  "H#$ # $#H#$##",
+  "H#######H##-$",
+  "        H#G E",
+];
 
-assert.deepEqual(stages, [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage, centralLadderStage]);
-assert.deepEqual(stages.map(({ id }) => id), ["blank", "gold-guard-reposition", "terrace-descent", "two-ladders", "central-ladder"]);
-assert.deepEqual(stages.map(({ title }) => title), ["ブランクマップ", "上段のロープ", "段丘の足場", "二本の梯子", "中央の梯子"]);
+assert.deepEqual(stages, [blankStage, goldGuardRepositionStage, terraceDescentStage, twoLaddersStage, centralLadderStage, fourChambersStage]);
+assert.deepEqual(stages.map(({ id }) => id), ["blank", "gold-guard-reposition", "terrace-descent", "two-ladders", "central-ladder", "four-chambers"]);
+assert.deepEqual(stages.map(({ title }) => title), ["ブランクマップ", "上段のロープ", "段丘の足場", "二本の梯子", "中央の梯子", "四つの小部屋"]);
 
 for (const [stage, map] of [[blankStage, blankMap], [goldGuardRepositionStage, goldMap],
-  [terraceDescentStage, terraceMap], [twoLaddersStage, twoLaddersMap], [centralLadderStage, centralLadderMap]]) {
+  [terraceDescentStage, terraceMap], [twoLaddersStage, twoLaddersMap], [centralLadderStage, centralLadderMap],
+  [fourChambersStage, fourChambersMap]]) {
   assert.equal(stage.tiles.length, 9);
   assert.ok(stage.tiles.every((row) => row.length === 13));
   const formatted = formatStageAsMapText(stage);
@@ -127,6 +139,19 @@ assert.deepEqual(centralLadderStage.knownSolution, [
   Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT, Action.RIGHT,
   Action.WAIT, Action.RIGHT, Action.RIGHT, Action.UP, Action.LEFT,
 ]);
+assert.equal(fourChambersStage.id, "four-chambers");
+assert.equal(fourChambersStage.title, "四つの小部屋");
+assert.deepEqual(fourChambersStage.player, { x: 1, y: 0 });
+assert.deepEqual(fourChambersStage.guards, [{ x: 10, y: 8 }]);
+assert.deepEqual(fourChambersStage.gold, [
+  { x: 2, y: 3 }, { x: 6, y: 3 }, { x: 12, y: 3 }, { x: 10, y: 4 }, { x: 12, y: 5 },
+  { x: 2, y: 6 }, { x: 6, y: 6 }, { x: 10, y: 6 }, { x: 12, y: 7 },
+]);
+assert.deepEqual(fourChambersStage.tiles, [
+  "        H   H", "H#######H   H", "H#  #H #H#  H", "H#  #  #H### ",
+  "H ##### H# ##", "H# H#  #H### ", "H#  #  #H# ##", "H#######H##- ", "        H#  E",
+]);
+assert.equal(fourChambersStage.knownSolution.length, 81);
 
 function replay(stage) {
   let state = createSampleState(stage);
@@ -180,6 +205,13 @@ assert.deepEqual(centralLadderReplay.states[13].player, { x: 9, y: 7 }, "14th WA
 assert.equal(centralLadderReplay.state.status, "won");
 assert.deepEqual(centralLadderReplay.state.gold, []);
 assert.deepEqual(centralLadderReplay, replay(centralLadderStage), "replay must be deterministic");
+const fourChambersReplay = replay(fourChambersStage);
+assert.equal(fourChambersReplay.states.length, 81);
+assert.equal(fourChambersReplay.states[79].gold.length, 0, "80th accepted action collects final Gold");
+assert.deepEqual(fourChambersReplay.states[80].player, { x: 12, y: 8 }, "81st action reaches Goal");
+assert.equal(fourChambersReplay.state.status, "won");
+assert.deepEqual(fourChambersReplay.state.gold, []);
+assert.deepEqual(fourChambersReplay, replay(fourChambersStage), "replay must be deterministic");
 
 for (const stage of stages) {
   const state = createSampleState(stage);
